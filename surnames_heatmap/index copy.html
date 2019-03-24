@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Heatmap of Italian Surnames </title>
+    <meta charset="utf-8" />
+    <meta property="og:image" content="https://hopperrr.github.io/surnames_heatmap/thumbs.jpg" />
+    <link rel="stylesheet" href="https://hopperrr.github.io/surnames_heatmap/awesomplete.css" />
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.4.0/dist/leaflet.css"
+    />
+</head>
+
+<style>
+p { font-family: 'Open Sans', sans-serif;}
+</style>
+
+<body>
+
+    <script src="awesomplete.js" ></script>
+    <script src="https://unpkg.com/leaflet@1.4.0/dist/leaflet.js"> </script>
+    <script src="https://leaflet.github.io/Leaflet.heat/dist/leaflet-heat.js"> </script>
+    <script type="text/javascript" src="tile_stamen.js"></script>
+
+	<script src="https://hopperrr.github.io/surnames_heatmap/awes.js"></script>
+<p>In the box below, start typing an Italian surname. After two letters you will be shown names that match. Continue typing to see more choices, or select one from the list of matches to see a heatmap of current distribution of people with the surname you selected.</p>
+	<input id="myinput" />
+  	<input id="buttoner" type=button value='New Surname Search'>
+    <p id="demo"></p>
+      <div id="map" style="width: 1200px; height: 1200px; z-index: -200; position: absolute"></div>
+
+    <script>
+
+    document.getElementById ("buttoner").addEventListener ("click", clicker2, false);
+    
+    function clicker2() {
+  	//window.location.href = "https://hopperrr.github.io/surnames_heatmap/index.html";
+  	window.location.reload();
+	}
+
+    var map = L.map('map').setView([41.5,12.39], 7, {zoomSnap: 0.1});
+    var layer = new L.StamenTileLayer("toner-lite");
+    map.addLayer(layer);
+    //mapLink = '<a href="http://openstreetmap.org">OpenStreetMap</a>';
+    //L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution: '&copy; ' + mapLink + ' Contributors', maxZoom: 18, }).addTo(map);
+	//var heat = L.heatLayer(locat,{radius: 10, minOpacity: 50, blur: 30, maxZoom: 15}).addTo(map);
+	//code so that things wait for src to fully load
+    function includeJs(jsFilePath) {
+    	var js = document.createElement("script");
+    	js.type = "text/javascript";
+    	js.src = jsFilePath;
+		document.body.appendChild(js);
+	}
+	var input = document.getElementById("myinput");
+	var awesomplete = new Awesomplete(input);
+	awesomplete.list = awe;
+	document.getElementById('myinput').addEventListener("awesomplete-select", function(event) {var locat_find = 'https://hopperrr.github.io/surnames_heatmap/scripts/' + event.text.value + '.js';
+
+	(function(d, script) {
+    	script = d.createElement('script');
+    	script.type = 'text/javascript';
+    	script.async = true;
+    	script.onload = function(){
+		var heaters = new L.FeatureGroup();
+
+		var heat = L.heatLayer(locat,{radius: 10, minOpacity: 50, blur: 30, maxZoom: 10,}).addTo(map);
+    document.getElementById('myinput').disabled = true;
+
+    	};
+    	script.src = locat_find;
+    	d.getElementsByTagName('head')[0].appendChild(script);
+		}(document));
+
+	});
+    </script>
+</body>
+</html>
