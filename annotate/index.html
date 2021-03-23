@@ -7,19 +7,16 @@
     <script src="js/firebasejs/7.14.3/firebase-app.js"></script>
     <script src="js/firebasejs/7.14.3/firebase-firestore.js"></script>
     <script>
-      // Firebase will auto-generate this config for you when you 
-      // create your app. Just paste your own settings in here.
-      var firebaseConfig = {
-        apiKey: "-- your firebase api key here --",
-        authDomain: "-- your authdomain here --",
-        databaseURL: "-- your database url --",
-        projectId: "-- your project id --",
-        storageBucket: "-- your storage bucket --",
-        messagingSenderId: "...",
-        appId: "..."
-      };
-
-      firebase.initializeApp(firebaseConfig);
+  var firebaseConfig = {
+    apiKey: "AIzaSyA6OyoBpzziP6-f7v-LeRk7nJ5N8wxGucU",
+    authDomain: "annotate-bfc01.firebaseapp.com",
+    projectId: "annotate-bfc01",
+    storageBucket: "annotate-bfc01.appspot.com",
+    messagingSenderId: "286689920385",
+    appId: "1:286689920385:web:27e5463e85b1356cf61480"
+  };
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
 
       var db = firebase.firestore();
 
