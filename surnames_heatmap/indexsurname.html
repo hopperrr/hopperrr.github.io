@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Map of Italian Surnames </title>
+    <meta charset="utf-8" />
+    <meta property="og:image" content="https://hopperrr.github.io/surnames_heatmap/thumbs.jpg" />
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.4.0/dist/leaflet.css">
+	<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+	<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">	
+</head>
+
+<style>
+p { font-family: 'Open Sans', sans-serif;}
+</style>
+
+<body>
+
+    <script src="https://unpkg.com/leaflet@1.4.0/dist/leaflet.js"> </script>
+	<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster-src.js"> </script>
+    <script src="https://leaflet.github.io/Leaflet.heat/dist/leaflet-heat.js"> </script>
+    <script type="text/javascript" src="tile_stamen.js"></script>
+
+	<script src="https://hopperrr.github.io/surnames_heatmap/awes.js"></script>
+	<p id="p1">Surnames of Italy</p>
+    <p id="demo"></p>
+    <div id="map" style="width: 2200px; height: 2200px; z-index: -200; position: absolute"></div>
+
+    <script>
+	var tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+				maxZoom: 16,
+				attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Points &copy 2012 LINZ'
+			}),
+			latlng = L.latLng(39, 18);
+
+		var map = L.map('map', {center: latlng, zoom: 7, layers: [tiles]});
+	var familyNameResult;
+    function familyName() {
+		try {
+			var url_string = (window.location.href).toLowerCase();
+			var url = new URL(url_string);
+			var name = url.searchParams.get("name");
+			familyNameResult = name
+		} catch (err) {
+			console.log("Issues with Parsing URL Parameter's - " + err);
+		}
+	}
+	familyName()
+	function capitalizeFirstLetter(string) {
+  		return string.charAt(0).toUpperCase() + string.slice(1);
+	}
+	familyNameResult = capitalizeFirstLetter(familyNameResult)
+	document.getElementById("p1").innerHTML = familyNameResult;
+	var locat_find = '.https://hopperrr.github.io/surnames_heatmap/scripts/' + familyNameResult + '.js';
+	console.log(locat_find);
+	function includeJs(jsFilePath) {
+    	var js = document.createElement("script");
+    	js.type = "text/javascript";
+    	js.src = jsFilePath;
+		document.body.appendChild(js);
+	}
+	//var input = document.getElementById("myinput");
+	//var awesomplete = new Awesomplete(input);
+	//awesomplete.list = awe;
+	//document.getElementById('myinput').addEventListener("awesomplete-select", function(event) {var locat_find = 'https://hopperrr.github.io/surnames_heatmap/scripts/' + event.text.value + '.js';
+
+	(function(d, script) {
+    	script = d.createElement('script');
+    	script.type = 'text/javascript';
+    	script.async = true;
+    	script.onload = function(){
+		var heaters = new L.FeatureGroup();
+
+		//var heat = L.heatLayer(locat,{radius: 10, minOpacity: 50, blur: 30, maxZoom: 10,}).addTo(map);
+		var markers = L.markerClusterGroup();
+		for (var i = 0; i < locat.length; i++) {
+			var a = locat[i];
+			var marker = L.marker(new L.LatLng(a[0], a[1]));
+			markers.addLayer(marker);
+		}
+		map.addLayer(markers);
+    //document.getElementById('myinput').disabled = true;
+
+    	};
+    	script.src = locat_find;
+    	d.getElementsByTagName('head')[0].appendChild(script);
+		}(document));
+
+	
+    </script>
+</body>
+</html>
