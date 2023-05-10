@@ -1,0 +1,55 @@
+{
+    "version": 8,
+    "sources": {
+    "osm": {
+    "type": "raster",
+    "tiles": ["https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"],
+    "tileSize": 256,
+    "attribution": "&copy; OpenStreetMap Contributors",
+    "maxzoom": 19
+    },
+    "homes": {
+        "type": "geojson",
+        
+        "data": {
+            "type": "Feature",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [ -94.002,36.945],
+                        [ -93.740,36.4030],
+                        [ -94.576,35.992],
+                        [ -94.177, 36.07954],
+                        [ -93.551, 37.550],
+                        [ -93.722, 36.9678],
+                        [-94.898,29.2542],
+                        [ -94.030, 38.191],
+                        [ -93.63774556214747, 37.00417],
+                        [ -97.9142, 35.9804],
+                        [ -100.928, 37.0478],
+                        [ -94.002,36.945]
+                    ]
+                ]
+            }
+        }
+    }
+    },
+    "layers": [
+    {
+    "id": "osm",
+    "type": "raster",
+    "source": "osm"
+    },
+    {
+        "id": "outline",
+        "type": "line",
+        "source": "homes",
+        "paint": {
+            "line-color": "#a9a9a9",
+            "line-width": 5,
+            "line-opacity": 0.5
+        }
+    }  
+]
+}
