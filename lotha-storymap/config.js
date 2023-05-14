@@ -339,6 +339,33 @@ var config = {
             onChapterExit: []
         },
         {
+            id: 'granbury',
+            alignment: 'left',
+            hidden: false,
+            title: 'Granbury, Texas',
+            image: './images/granb.png',
+            caption:'The Granbury News, November 4th, 1927',
+             location: {
+                center: [-97.791, 32.4480],
+                zoom: 12,
+                pitch: 0,
+                speed: 0.2,
+                bearing: 0
+            },
+            mapAnimation: 'flyTo',
+            rotateAnimation: false,
+            mapInteractive: true,
+            callback: '',
+            onChapterEnter: [
+                // {
+                //     layer: 'countries-fill',
+                //     opacity: 0
+                // }
+            ],
+            onChapterExit: []
+        },
+
+        {
             id: 'liberal',
             alignment: 'right',
             hidden: false,
