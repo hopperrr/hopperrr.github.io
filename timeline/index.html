@@ -227,7 +227,17 @@ document.getElementById('importFile').addEventListener('change', function(event)
       reader.readAsText(file);
     }
   });
-
+        // Add double click event listener to the timeline
+        timeline.on('doubleClick', function (properties) {
+            if (properties.item) {
+                var itemId = properties.item;
+                var item = items.get(itemId);
+                var newText = prompt("Enter new text:", item.content);
+                if (newText !== null) {
+                    items.update({ id: itemId, content: newText });
+                }
+            }
+        });
 </script>
 </body>
 </html>
