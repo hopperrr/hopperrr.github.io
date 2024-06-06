@@ -58,7 +58,7 @@
         // Map
         var map = L.map('map', {
             center: [8.146206833564783, 0.0],
-            zoom: 7,
+            zoom: 6,
             minZoom: 1,
             maxZoom: 7,
             layers: [osm,lyr]
@@ -75,7 +75,7 @@
             return this._div;
         };
         title.update = function(props) {
-            this._div.innerHTML = "Ocean_currents_1943_byte.tif";
+            this._div.innerHTML = "Ocean Currents: 1943";
         };
         title.addTo(map);
 
