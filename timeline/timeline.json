@@ -1,0 +1,123 @@
+{
+ "items": [
+  {
+   "id": 1,
+   "content": "Adam",
+   "editable": true,
+   "start": "2024-05-24",
+   "end": "2024-05-27",
+   "group": 5
+  },
+  {
+   "id": 2,
+   "content": "Julia",
+   "editable": true,
+   "start": "2024-05-24",
+   "end": "2024-05-27",
+   "group": 1
+  },
+  {
+   "id": 3,
+   "content": "Rachel",
+   "editable": true,
+   "start": "2024-05-24",
+   "end": "2024-05-30",
+   "group": 2
+  },
+  {
+   "id": 4,
+   "content": "Cheri",
+   "editable": true,
+   "start": "2024-05-24",
+   "end": "2024-05-27",
+   "group": 3
+  },
+  {
+   "id": 5,
+   "content": "Tim",
+   "editable": true,
+   "start": "2024-05-24",
+   "end": "2024-05-27",
+   "group": 4
+  },
+  {
+   "id": 6,
+   "content": "Phil",
+   "editable": true,
+   "start": "2024-05-27",
+   "end": "2024-05-31",
+   "group": 3
+  },
+  {
+   "id": 7,
+   "content": "Dana",
+   "editable": true,
+   "start": "2024-05-28",
+   "end": "2024-05-30",
+   "group": 4
+  },
+  {
+   "id": 8,
+   "content": "Tina",
+   "editable": true,
+   "start": "2024-06-3",
+   "group": 8
+  },
+  {
+   "id": 9,
+   "content": "Will",
+   "editable": true,
+   "start": "2024-05-23",
+   "group": 8
+  },
+  {
+   "id": 10,
+   "content": "Ana",
+   "editable": true,
+   "start": "2024-06-6",
+   "group": 8
+  },
+  {
+   "id": 11,
+   "content": "Kristen",
+   "editable": true,
+   "start": "2024-05-23",
+   "end": "2024-05-24",
+   "group": 8
+  }
+ ],
+ "groups": [
+  {
+   "id": 1,
+   "content": "Room1"
+  },
+  {
+   "id": 2,
+   "content": "Room2"
+  },
+  {
+   "id": 3,
+   "content": "Room3"
+  },
+  {
+   "id": 4,
+   "content": "Room4"
+  },
+  {
+   "id": 5,
+   "content": "Room5"
+  },
+  {
+   "id": 6,
+   "content": "Room6"
+  },
+  {
+   "id": 8,
+   "content": "Guest House"
+  },
+  {
+   "id": 7,
+   "content": "Flights"
+  }
+ ]
+}
