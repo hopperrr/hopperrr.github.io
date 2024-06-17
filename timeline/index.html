@@ -5,6 +5,7 @@
   <link rel="stylesheet" href="tufte.css"/>
   <script type="text/javascript" src="https://unpkg.com/vis-timeline@latest/standalone/umd/vis-timeline-graph2d.min.js"></script>
   <link href="https://unpkg.com/vis-timeline@latest/styles/vis-timeline-graph2d.min.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style type="text/css">
     #visualization {
       width: 1200px;
@@ -24,7 +25,8 @@
 </head>
 <body>
   <h1>Timeline of People and Places</h1>
-  <h4>Click on people to move around on the timeline.</h4>
+  <h4>Click on people to move around on the timeline, place into different rooms or delete altogether. Add new people and change room
+    names in the area below the timeline. Save your work with the "Export Timeline" button or save it as an image.</h4>
    
 <div id="visualization"></div>
 <h4>Add a new person and their details here:</h4>
@@ -47,140 +49,57 @@
   <!-- Group names and input fields will be added dynamically here -->
 </div>
 <h4>To save your work as a JSON text file, click "Export Timeline". Or, "Import Timeline", to populate the above timeline with a saved timeline.</h4>
-<button onclick="exportTimeline()">Export Timeline</button>
-<input type="file" id="importFile" accept=".json" style="display:none">
+
 <button onclick="document.getElementById('importFile').click()">Import Timeline</button>
+<button onclick="exportTimeline()">Export Timeline</button>
+<button onclick="saveTimelineAsImage()">Save Timeline as Image</button>
+<input type="file" id="importFile" accept=".json" style="display:none">
 <script type="text/javascript">
   var container = document.getElementById('visualization');
-  var items = new vis.DataSet([
-  { id: 1, content: "John", editable: true, start: "2024-05-24", end: "2024-05-27", group: 1 },
-  { id: 2, content: "Brian", editable: true, start: "2024-05-24", end: "2024-05-27", group: 1 },
-  { id: 3, content: "George", editable: true, start: "2024-05-24", end: "2024-05-30", group: 2 },
-  { id: 4, content: "Ringo", editable: true, start: "2024-05-24", end: "2024-05-27", group: 3 },
-  { id: 5, content: "Barbara", editable: true, start: "2024-05-24", end: "2024-05-27", group: 4},
-  { id: 6, content: "Paul and Linda", editable: true, start: "2024-05-27", end: "2024-05-31", group: 3},
-  { id: 7, content: "Peter", editable: true, start: "2024-05-28", end: "2024-05-30", group: 4 },
-  { id: 8, content: "Peter and George", editable: true, start: "2024-06-3", group: 8},
-  { id: 9, content: "John and George", editable: true, start: "2024-05-23", group: 8},
-  { id: 10, content: "Peter", editable: true, start: "2024-06-6", group: 8},
-  { id: 11, content: "George", editable: true, start: "2024-05-23", end: "2024-05-24", group: 8},
-]);
+  var items = new vis.DataSet();
+  var groups = [];
+  var timeline;
 
-var groups = [
-  { id: 1, content: "Liverpool" },
-  { id: 2, content: "Hamburg" },
-  { id: 3, content: "London" },
-  { id: 4, content: "Shea Stadium" },
-  { id: 5, content: "Abbey Road" },
-  { id: 6, content: "Downton Abbey" },
-  { id: 8, content: "Scotland" },
-  { id: 7, content: "Flights" },
-];
-
-var options = {
-  editable: {
-    add: true,
-    remove: true,
-    updateGroup: false,
-    updateTime: true,
-    overrideItems: false,
-  }, // default for all items
-};
-
-var timeline = new vis.Timeline(container, items, groups, options);
-
-// Add group name input fields dynamically
-var groupNamesDiv = document.getElementById('groupNames');
-groups.forEach(function(group) {
-  var inputField = document.createElement('input');
-  inputField.type = 'text';
-  inputField.value = group.content;
-  inputField.className = 'group-name-input';
-  inputField.addEventListener('input', function() {
-    updateGroupName(group.id, this.value);
-  });
-  groupNamesDiv.appendChild(inputField);
-});
-
-// Populate group options in select dropdown
-var groupSelect = document.getElementById('groupSelect');
-groups.forEach(function(group) {
-  var option = document.createElement('option');
-  option.value = group.id;
-  option.textContent = group.content;
-  groupSelect.appendChild(option);
-});
-
-function updateGroupName(groupId, newName) {
-  var group = groups.find(function(group) {
-    return group.id === groupId;
-  });
-  if (group) {
-    group.content = newName;
-    timeline.setGroups(groups);
-  }
-}
-
-function addTimelineItem() {
-  var itemName = document.getElementById('itemName').value.trim();
-  var startDate = document.getElementById('startDate').value.trim();
-  var endDate = document.getElementById('endDate').value.trim();
-  var groupId = document.getElementById('groupSelect').value;
-
-  // Validate input
-  if (itemName === '' || startDate === '' || groupId === '') {
-    alert('Please enter item name, start date, and select a group.');
-    return;
-  }
-
-  var newItem = { id: items.length + 1, content: itemName, start: startDate, group: parseInt(groupId),style: "color: #292928; background-color: #AFBED1;" };
-  if (endDate !== '') {
-    newItem.end = endDate;
-  }
-  items.add(newItem);
-
-  // Clear input fields
-  document.getElementById('itemName').value = '';
-  document.getElementById('startDate').value = '';
-  document.getElementById('endDate').value = '';
-}
-
-function exportTimeline() {
-  var exportedData = {
-    items: items.get(),
-    groups: groups
+  var options = {
+    editable: {
+      add: true,
+      remove: true,
+      updateGroup: false,
+      updateTime: true,
+      overrideItems: false,
+    }, // default for all items
   };
-  var blob = new Blob([JSON.stringify(exportedData,undefined,1)], { type: 'application/json' });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = 'timeline.json';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
 
-document.getElementById('importFile').addEventListener('change', function(event) {
-  var file = event.target.files[0];
-  if (file) {
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      try {
-        var importedData = JSON.parse(e.target.result);
-        items.clear();
-        items.add(importedData.items);
-        groups = importedData.groups;
-        timeline.setGroups(groups);
-        timeline.fit();
-      } catch (error) {
-        alert("Error importing timeline data. Please make sure the JSON format is correct.");
-      }
-    };
-    reader.readAsText(file);
+  function initializeTimeline(data) {
+    items.add(data.items);
+    groups = data.groups;
+    timeline = new vis.Timeline(container, items, groups, options);
+    populateGroupInputs();
+    updateGroupSelectOptions();
   }
-});
-  // Function to update group name
+
+  function fetchData() {
+    fetch('timeline.json')
+      .then(response => response.json())
+      .then(data => initializeTimeline(data))
+      .catch(error => console.error('Error fetching data:', error));
+  }
+
+  function populateGroupInputs() {
+    var groupNamesDiv = document.getElementById('groupNames');
+    groupNamesDiv.innerHTML = ''; // Clear existing input fields
+    groups.forEach(function(group) {
+      var inputField = document.createElement('input');
+      inputField.type = 'text';
+      inputField.value = group.content;
+      inputField.className = 'group-name-input';
+      inputField.addEventListener('input', function() {
+        updateGroupName(group.id, this.value);
+      });
+      groupNamesDiv.appendChild(inputField);
+    });
+  }
+
   function updateGroupName(groupId, newName) {
     var group = groups.find(function(group) {
       return group.id === groupId;
@@ -192,12 +111,10 @@ document.getElementById('importFile').addEventListener('change', function(event)
     }
   }
 
-  // Function to update group select options
   function updateGroupSelectOptions() {
-    // Clear existing options
-    groupSelect.innerHTML = '';
+    var groupSelect = document.getElementById('groupSelect');
+    groupSelect.innerHTML = ''; // Clear existing options
 
-    // Populate group options in select dropdown
     groups.forEach(function(group) {
       var option = document.createElement('option');
       option.value = group.id;
@@ -206,7 +123,46 @@ document.getElementById('importFile').addEventListener('change', function(event)
     });
   }
 
-  // Event listener for importing timeline data
+  function addTimelineItem() {
+    var itemName = document.getElementById('itemName').value.trim();
+    var startDate = document.getElementById('startDate').value.trim();
+    var endDate = document.getElementById('endDate').value.trim();
+    var groupId = document.getElementById('groupSelect').value;
+
+    // Validate input
+    if (itemName === '' || startDate === '' || groupId === '') {
+      alert('Please enter item name, start date, and select a group.');
+      return;
+    }
+
+    var newItem = { id: items.length + 1, content: itemName, start: startDate, group: parseInt(groupId), style: "color: #292928; background-color: #AFBED1;" };
+    if (endDate !== '') {
+      newItem.end = endDate;
+    }
+    items.add(newItem);
+
+    // Clear input fields
+    document.getElementById('itemName').value = '';
+    document.getElementById('startDate').value = '';
+    document.getElementById('endDate').value = '';
+  }
+
+  function exportTimeline() {
+    var exportedData = {
+      items: items.get(),
+      groups: groups
+    };
+    var blob = new Blob([JSON.stringify(exportedData, undefined, 1)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'timeline.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   document.getElementById('importFile').addEventListener('change', function(event) {
     var file = event.target.files[0];
     if (file) {
@@ -227,17 +183,30 @@ document.getElementById('importFile').addEventListener('change', function(event)
       reader.readAsText(file);
     }
   });
-        // Add double click event listener to the timeline
-        timeline.on('doubleClick', function (properties) {
-            if (properties.item) {
-                var itemId = properties.item;
-                var item = items.get(itemId);
-                var newText = prompt("Enter new text:", item.content);
-                if (newText !== null) {
-                    items.update({ id: itemId, content: newText });
-                }
-            }
-        });
+
+  function saveTimelineAsImage() {
+    html2canvas(document.getElementById('visualization')).then(function(canvas) {
+      var link = document.createElement('a');
+      link.href = canvas.toDataURL();
+      link.download = 'timeline.png';
+      link.click();
+    });
+  }
+
+  // Add double click event listener to the timeline
+  timeline && timeline.on('doubleClick', function (properties) {
+    if (properties.item) {
+      var itemId = properties.item;
+      var item = items.get(itemId);
+      var newText = prompt("Enter new text:", item.content);
+      if (newText !== null) {
+        items.update({ id: itemId, content: newText });
+      }
+    }
+  });
+
+  // Fetch data when the page loads
+  window.onload = fetchData;
 </script>
 </body>
 </html>
