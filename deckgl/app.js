@@ -14,7 +14,7 @@ const deckgl = new deck.DeckGL({
 
 const tooltip = document.getElementById('tooltip');
 
-fetch('https://github.com/hopperrr/geospatial_data/raw/main/data.json')
+fetch('https://corsproxy.io/?https://github.com/hopperrr/geospatial_data/raw/main/data.json')
     .then(response => response.json())
     .then(data => {
         const hexagonLayer = new deck.HexagonLayer({
@@ -42,7 +42,7 @@ fetch('https://github.com/hopperrr/geospatial_data/raw/main/data.json')
         });
 
         // Load and add the GeoJSON layer
-        fetch('https://github.com/hopperrr/geospatial_data/raw/main/lines.geojson')
+        fetch('https://corsproxy.io/?https://github.com/hopperrr/geospatial_data/raw/main/lines.geojson')
             .then(response => response.json())
             .then(geojson => {
                 const geoJsonLayer = new deck.GeoJsonLayer({
