@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hexagon Map with GeoJSON Lines</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        .tooltip {
+            position: absolute;
+            background-color: white;
+            padding: 5px;
+            border: 1px solid black;
+            pointer-events: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="tooltip" class="tooltip" style="display: none;"></div>
+    <script src="https://unpkg.com/deck.gl/dist.min.js"></script>
+    <script src="https://unpkg.com/h3-js/dist/h3-js.umd.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
