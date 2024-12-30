@@ -1,6 +1,6 @@
 const initialViewState = {
-    longitude: 12.8829,
-    latitude: 42.0783,
+    longitude: 9.18,
+    latitude: 45.46,
     zoom: 8,
     pitch: 40.5,
     bearing: -27
