@@ -28,8 +28,10 @@
 
 <!-- Layer Toggle Menu -->
 <div class="menu">
-    <label><input type="checkbox" id="toggle-slippy" checked> 1943 Ocean Currents and Sea Ice</label><br>
-    <label><input type="checkbox" id="toggle-currents" checked> NASA Ocean Currents</label>
+    <label class="categoryLabel"><B>Comparison of Ocean Current Visualizations (1943 vs. 2011)</B></label>
+    <br>
+    <label><input type="checkbox" id="toggle-slippy" unchecked> 1943 Ocean Currents and Sea Ice</label><br>
+    <label><input type="checkbox" id="toggle-currents" checked> 2011 ECCO2 High Resolution Ocean and Sea Ice Model</label>
 </div>
 
 <script>
@@ -89,6 +91,7 @@ map.on('load', () => {
         id: 'slippy-map-layer',
         type: 'raster',
         source: 'slippy-map',
+        layout: { 'visibility': 'none' },
         paint: {
             "raster-opacity": 1.0
         }
@@ -96,18 +99,13 @@ map.on('load', () => {
 
     // Toggle Layer Visibility
     document.getElementById('toggle-slippy').addEventListener('change', function () {
-        map.setLayoutProperty('slippy-map-layer', 'visibility', this.checked ? 'visible' : 'none');
-    });
+    map.setLayoutProperty('slippy-map-layer', 'visibility', this.checked ? 'visible' : 'none');
+});
 
     document.getElementById('toggle-currents').addEventListener('change', function () {
         map.setLayoutProperty('currents-layer', 'visibility', this.checked ? 'visible' : 'none');
     });
 });
-
-const marker = new maplibregl.Marker()
-    .setLngLat([4.1862537, 3.3353102])
-    .addTo(map);
-
 
 // Add custom attribution
 map.addControl(new maplibregl.AttributionControl({
@@ -121,3 +119,4 @@ map.addControl(new maplibregl.AttributionControl({
 </script>
 </body>
 </html>
+
