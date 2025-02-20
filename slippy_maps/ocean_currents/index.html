@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Ocean Currents animated</title>
+    <meta property="og:description" content="Use a series of image sources to create an animation." />
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel='stylesheet' href='https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.css' />
+    <script src='https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js'></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        html, body, #map { height: 100%; }
+        .menu {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 10px;
+            font-family: Arial, sans-serif;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
+        .menu input { margin-right: 5px; }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+
+<!-- Layer Toggle Menu -->
+<div class="menu">
+    <label><input type="checkbox" id="toggle-slippy" checked> 1943 Ocean Currents and Sea Ice</label><br>
+    <label><input type="checkbox" id="toggle-currents" checked> NASA Ocean Currents</label>
+</div>
+
+<script>
+const map = new maplibregl.Map({
+    container: 'map',
+    style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+    maxZoom: 8,
+    minZoom: 2,
+    zoom: 4,
+    center: [-47.1501414,  32.2153233],
+    attributionControl: false
+});
+
+const frameCount = 98;
+let currentImage = 1;
+
+function getPath() {
+    return `./assets/Oceanflows.${String(currentImage).padStart(4, '0')}.gif`;
+}
+
+map.on('load', () => {
+    // Add Currents Animation Layer (Background Layer)
+    map.addSource('currents', {
+        type: 'image',
+        url: getPath(),
+        coordinates: [
+            [-98.383, 60.807],
+            [4.3521, 60.807],
+            [4.3521, 3.6434],
+            [-98.383, 3.6434]
+        ]
+    });
+
+    map.addLayer({
+        id: 'currents-layer',
+        type: 'raster',
+        source: 'currents',
+        paint: {
+            'raster-fade-duration': 0,
+            "raster-opacity": 1.0
+        }
+    });
+
+    setInterval(() => {
+        currentImage = (currentImage + 1) % frameCount;
+        map.getSource('currents').updateImage({ url: getPath() });
+    }, 200);
+
+    // Add Slippy Map Layer (On Top of Currents)
+    map.addSource('slippy-map', {
+        type: 'raster',
+        tiles: ['./{z}/{x}/{y}.png'],
+        tileSize: 256
+    });
+
+    map.addLayer({
+        id: 'slippy-map-layer',
+        type: 'raster',
+        source: 'slippy-map',
+        paint: {
+            "raster-opacity": 1.0
+        }
+    });
+
+    // Toggle Layer Visibility
+    document.getElementById('toggle-slippy').addEventListener('change', function () {
+        map.setLayoutProperty('slippy-map-layer', 'visibility', this.checked ? 'visible' : 'none');
+    });
+
+    document.getElementById('toggle-currents').addEventListener('change', function () {
+        map.setLayoutProperty('currents-layer', 'visibility', this.checked ? 'visible' : 'none');
+    });
+});
+
+const marker = new maplibregl.Marker()
+    .setLngLat([4.1862537, 3.3353102])
+    .addTo(map);
+
+
+// Add custom attribution
+map.addControl(new maplibregl.AttributionControl({
+    compact: true,  // Makes it smaller on smaller screens
+    customAttribution: [
+        'NASA/Goddard Space Flight Center Scientific Visualization Studio: <a href="https://svs.gsfc.nasa.gov/3821/" target="NASA/Goddard Space Flight Center Scientific Visualization Studio">Link</a>',
+        '1943 Ocean Currents: <a href="https://maps.lib.utexas.edu/maps/world_maps/ocean_currents_1943.jpg" target="_blank">Link</a>'
+    ]
+}));
+
+</script>
+</body>
+</html>
