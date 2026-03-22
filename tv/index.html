@@ -84,6 +84,22 @@
       color: #92400e;
     }
     
+    .url-example {
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+    }
+    .url-example code {
+      background: #e2e8f0;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: monospace;
+      word-break: break-all;
+    }
+    
     .controls {
       display: flex;
       flex-wrap: wrap;
@@ -272,14 +288,20 @@
   </style>
 </head>
 <body>
-  <h1>TV Show Air Dates</h1>
+  <h1>📺 TV Show Air Dates</h1>
   
   <div class="csv-format">
-    <strong>📋 CSV Format:</strong> <code>Show</code> (required), <code>IMDB</code> (optional fallback)<br>
-    <kbd>Show,IMDB</kbd><br>
-    <kbd>Slow Horses,5875444</kbd><br>
-    <kbd>Lynley,0274253</kbd><br>
-    <kbd>The Last of Us</kbd> ← IMDB optional, name search tried first
+    <strong>📋 Load Shows From:</strong><br>
+    <kbd>URL Parameter:</kbd> <code>?shows=Slow Horses,The Bear</code><br>
+    <kbd>CSV File:</kbd> <code>Show,IMDB</code> format (optional fallback)<br>
+    <kbd>Default:</kbd> Built-in show list if neither provided
+  </div>
+
+  <div class="url-example">
+    <strong>🔗 Example URLs:</strong><br>
+    <code>index.html?shows=Slow+Horses,The+Bear,Lynley</code><br>
+    <code>index.html?shows=Slow Horses:5875444,The Bear</code> ← with IMDB ID<br>
+    <code>index.html?shows=Slow Horses&sort=network</code> ← with other params
   </div>
   
   <div id="autoLoadBanner" class="banner" style="display:none"></div>
@@ -290,6 +312,7 @@
     <button id="loadBtn" class="btn">Load Shows</button>
     <button id="resetBtn" class="btn" style="background:#64748b">Reset</button>
     <button id="refreshBtn" class="btn" style="background:#16a34a">🔄 Refresh</button>
+    <button id="shareBtn" class="btn" style="background:#0284c7">🔗 Share URL</button>
   </div>
 
   <div id="status" class="status"></div>
@@ -326,13 +349,54 @@
     let allData = [];
     let filteredData = [];
     let currentSort = { key: 'airdate', direction: 'desc' };
+    let currentShows = []; // Track loaded shows for sharing
+
+    // ============ URL PARAMETER PARSING ============
+    function parseURLShows() {
+      const params = new URLSearchParams(window.location.search);
+      const showsParam = params.get('shows');
+      
+      if (!showsParam) return null;
+      
+      // Parse comma-separated shows, support "Name:IMDB" format
+      return showsParam.split(',').map(item => {
+        item = item.trim();
+        if (!item) return null;
+        
+        // Check for IMDB ID after colon
+        if (item.includes(':')) {
+          const [name, imdb] = item.split(':').map(s => s.trim());
+          return { name, imdb: imdb.replace(/^tt/i, '') };
+        }
+        
+        return { name: item, imdb: null };
+      }).filter(s => s && s.name);
+    }
+
+    function buildShareURL(shows) {
+      const params = new URLSearchParams(window.location.search);
+      const showsValue = shows
+        .filter(s => !s.error)
+        .map(s => {
+          if (s.imdbId && s.imdbId !== 'N/A') {
+            return `${encodeURIComponent(s.searchedName)}:${s.imdbId}`;
+          }
+          return encodeURIComponent(s.searchedName || s.name);
+        })
+        .join(',');
+      
+      params.set('shows', showsValue);
+      
+      // Preserve other params like sort order
+      const baseUrl = window.location.href.split('?')[0];
+      return `${baseUrl}?${params.toString()}`;
+    }
 
     // ============ UTILITIES ============
     function parseCSV(text) {
       const lines = text.trim().split('\n').filter(l => l.trim());
       if (lines.length < 2) return [];
       
-      // Check if header has IMDB column
       const header = lines[0].toLowerCase();
       const hasImdbColumn = header.includes('imdb');
       
@@ -340,7 +404,6 @@
         const parts = line.split(',').map(s => s.trim());
         const name = parts[0];
         const imdb = hasImdbColumn && parts[1] ? parts[1].replace(/^tt/i, '') : null;
-        
         return { name, imdb };
       }).filter(s => s.name);
     }
@@ -536,11 +599,10 @@
         const row = tbody.insertRow();
         
         if (item.error) {
-          // Show detailed lookup attempts for debugging
           let attemptsHtml = '';
           if (item.lookupAttempts) {
             attemptsHtml = item.lookupAttempts.map(a => {
-              const icon = a.status === 'success' ? '✅' : a.status === 'failed' || a.status === 'error' || a.status === 'no_results' ? '❌' : '⏳';
+              const icon = a.status === 'success' ? '✅' : '❌';
               return `<span class="badge lookup-failed" style="margin-right:0.25rem">${icon} ${a.method}</span>`;
             }).join('');
           }
@@ -563,10 +625,7 @@
         const latest = item.latestEpisode;
         const next = item.nextEpisode;
         
-        // Show lookup method badge
         const lookupBadge = getLookupMethodBadge(item.lookupMethod, true);
-        
-        // Show if name was fuzzy-matched
         const nameMatchBadge = item.name.toLowerCase() !== item.searchedName.toLowerCase() 
           ? `<span class="meta">Searched: "${item.searchedName}" → Matched: "${item.name}"</span>` 
           : `<span class="meta">Searched: "${item.searchedName}"</span>`;
@@ -793,7 +852,7 @@
     }
 
     // ============ MAIN FLOW ============
-    async function loadShows(shows, isAutoLoad = false) {
+    async function loadShows(shows, isAutoLoad = false, source = 'default') {
       const status = document.getElementById('status');
       const loadBtn = document.getElementById('loadBtn');
       const refreshBtn = document.getElementById('refreshBtn');
@@ -802,13 +861,14 @@
       refreshBtn.disabled = true;
       
       if (isAutoLoad) {
-        status.innerHTML = `<span class="loading">⏳ Auto-loading ${shows.length} show${shows.length !== 1 ? 's' : ''} from TVMaze...</span>`;
+        status.innerHTML = `<span class="loading">⏳ Loading ${shows.length} show${shows.length !== 1 ? 's' : ''} from ${source}...</span>`;
       } else {
         status.innerHTML = '<span class="loading">⏳ Fetching show data from TVMaze...</span>';
       }
       
       document.getElementById('resultsBody').innerHTML = '';
       allData = [];
+      currentShows = shows; // Track for sharing
       
       const concurrency = 5;
       for (let i = 0; i < shows.length; i += concurrency) {
@@ -846,13 +906,13 @@
             return;
           }
           
-          await loadShows(shows);
+          await loadShows(shows, false, 'CSV file');
         } catch (err) {
           document.getElementById('status').innerHTML = 
             `<span class="error">❌ Error reading file: ${err.message}</span>`;
         }
       } else {
-        await loadShows(defaultShows);
+        await loadShows(defaultShows, false, 'defaults');
       }
     });
 
@@ -865,13 +925,29 @@
     });
 
     document.getElementById('refreshBtn').addEventListener('click', async () => {
-      const shows = allData.filter(i => !i.error).map(i => ({
-        name: i.searchedName || i.name,
-        imdb: i.imdbId !== 'N/A' ? i.imdbId?.replace(/^tt/, '') : null
-      }));
-      if (shows.length > 0) {
-        await loadShows(shows);
+      if (currentShows.length > 0) {
+        await loadShows(currentShows, false, 'refresh');
       }
+    });
+
+    document.getElementById('shareBtn').addEventListener('click', () => {
+      const shareUrl = buildShareURL(allData);
+      
+      // Copy to clipboard
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        const btn = document.getElementById('shareBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '✅ Copied!';
+        btn.style.background = '#16a34a';
+        
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+          btn.style.background = '#0284c7';
+        }, 2000);
+      }).catch(err => {
+        // Fallback: show URL in prompt
+        prompt('Copy this shareable URL:', shareUrl);
+      });
     });
 
     document.getElementById('filterInput').addEventListener('input', 
@@ -892,13 +968,29 @@
     window.addEventListener('DOMContentLoaded', async () => {
       updateSortIndicators();
       
-      const autoLoadedShows = await tryAutoLoadCSV();
+      // PRIORITY 1: Check URL parameter first
+      const urlShows = parseURLShows();
       
-      if (autoLoadedShows) {
-        await loadShows(autoLoadedShows, true);
-      } else {
-        await loadShows(defaultShows);
+      if (urlShows && urlShows.length > 0) {
+        const banner = document.getElementById('autoLoadBanner');
+        banner.style.display = 'flex';
+        banner.className = 'banner success';
+        banner.innerHTML = `✅ Loaded ${urlShows.length} show${urlShows.length !== 1 ? 's' : ''} from URL`;
+        
+        await loadShows(urlShows, true, 'URL');
+        return;
       }
+      
+      // PRIORITY 2: Try auto-load CSV
+      const csvShows = await tryAutoLoadCSV();
+      
+      if (csvShows) {
+        await loadShows(csvShows, true, 'CSV');
+        return;
+      }
+      
+      // PRIORITY 3: Fall back to defaults
+      await loadShows(defaultShows, false, 'defaults');
     });
   </script>
 </body>
