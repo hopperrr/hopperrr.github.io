@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TV Show Air Dates</title>
+  <style>
+    :root {
+      --primary: #7c3aed;
+      --primary-hover: #6d28d9;
+      --bg: #f8fafc;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --error: #dc2626;
+      --success: #16a34a;
+      --warning: #ca8a04;
+      --info: #0284c7;
+    }
+    
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    
+    h1 { margin: 0 0 1.5rem; font-size: 1.8rem; }
+    
+    .banner {
+      background: #fff7ed;
+      border: 1px solid #fcd34d;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      color: #92400e;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .banner.success {
+      background: #f0fdf4;
+      border-color: #86efac;
+      color: #166534;
+    }
+    .banner.error {
+      background: #fef2f2;
+      border-color: #fca5a5;
+      color: #991b1b;
+    }
+    .banner.info {
+      background: #f0f9ff;
+      border-color: #bae6fd;
+      color: #075985;
+    }
+    
+    .csv-format {
+      background: #f8fafc;
+      border: 1px dashed var(--border);
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .csv-format code {
+      background: #e2e8f0;
+      padding: 0.15rem 0.4rem;
+      border-radius: 3px;
+      font-family: monospace;
+      color: var(--text);
+    }
+    .csv-format kbd {
+      background: #fef3c7;
+      padding: 0.1rem 0.3rem;
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 0.9em;
+      color: #92400e;
+    }
+    
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    
+    .controls > * { margin: 0; }
+    
+    #csvInput { flex: 1; min-width: 200px; }
+    
+    #filterInput {
+      flex: 2;
+      min-width: 250px;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+    
+    #filterInput:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+    }
+    
+    .btn {
+      padding: 0.5rem 1rem;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: var(--primary-hover); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    
+    .table-container {
+      background: white;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    table { width: 100%; border-collapse: collapse; }
+    
+    th, td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+    
+    th {
+      background: #f1f5f9;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      transition: background 0.2s;
+    }
+    
+    th:hover { background: #e2e8f0; }
+    
+    th.sorted { background: #ede9fe; }
+    
+    th::after {
+      content: '⇅';
+      position: absolute;
+      right: 0.75rem;
+      color: var(--text-muted);
+      font-size: 0.85em;
+      opacity: 0.7;
+    }
+    
+    th.sort-asc::after { content: '↑'; opacity: 1; color: var(--primary); }
+    th.sort-desc::after { content: '↓'; opacity: 1; color: var(--primary); }
+    
+    tr:hover { background: #f8fafc; }
+    
+    .episode-title { font-weight: 600; }
+    .meta { color: var(--text-muted); font-size: 0.85em; display: block; margin-top: 0.25rem; }
+    .loading { color: var(--text-muted); font-style: italic; }
+    .error { color: var(--error); }
+    .empty { text-align: center; padding: 2rem; color: var(--text-muted); }
+    
+    .status {
+      margin: 0.5rem 0 1rem;
+      min-height: 1.5rem;
+      font-size: 0.9rem;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      background: #ede9fe;
+      color: #5b21b6;
+      border-radius: 999px;
+      font-size: 0.8em;
+      font-weight: 500;
+    }
+    
+    .badge.network {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    
+    .badge.status-running {
+      background: #dcfce7;
+      color: #166534;
+    }
+    
+    .badge.status-ended {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    
+    .badge.status-unknown {
+      background: #f1f5f9;
+      color: #475569;
+    }
+    
+    .badge.lookup-name {
+      background: #dcfce7;
+      color: #166534;
+    }
+    
+    .badge.lookup-imdb {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    
+    .badge.lookup-failed {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    
+    .show-poster {
+      width: 40px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 4px;
+      background: #e2e8f0;
+    }
+    
+    .show-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    
+    .next-episode {
+      background: #fef3c7;
+      border-left: 3px solid #f59e0b;
+      padding: 0.5rem 0.75rem;
+      margin-top: 0.5rem;
+      border-radius: 0 4px 4px 0;
+      font-size: 0.85em;
+    }
+    
+    .no-next {
+      color: var(--text-muted);
+      font-style: italic;
+      font-size: 0.85em;
+    }
+    
+    .lookup-method {
+      display: inline-block;
+      margin-left: 0.5rem;
+    }
+    
+    @media (max-width: 768px) {
+      .controls { flex-direction: column; align-items: stretch; }
+      table { font-size: 0.9rem; }
+      th, td { padding: 0.7rem 0.5rem; }
+      .hide-mobile { display: none; }
+      .show-poster { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <h1>TV Show Air Dates</h1>
+  
+  <div class="csv-format">
+    <strong>📋 CSV Format:</strong> <code>Show</code> (required), <code>IMDB</code> (optional fallback)<br>
+    <kbd>Show,IMDB</kbd><br>
+    <kbd>Slow Horses,5875444</kbd><br>
+    <kbd>Lynley,0274253</kbd><br>
+    <kbd>The Last of Us</kbd> ← IMDB optional, name search tried first
+  </div>
+  
+  <div id="autoLoadBanner" class="banner" style="display:none"></div>
+  
+  <div class="controls">
+    <input type="file" id="csvInput" accept=".csv" />
+    <input type="text" id="filterInput" placeholder="🔍 Filter by show name, network, or episode..." />
+    <button id="loadBtn" class="btn">Load Shows</button>
+    <button id="resetBtn" class="btn" style="background:#64748b">Reset</button>
+    <button id="refreshBtn" class="btn" style="background:#16a34a">🔄 Refresh</button>
+  </div>
+
+  <div id="status" class="status"></div>
+  
+  <div class="table-container">
+    <table id="resultsTable">
+      <thead>
+        <tr>
+          <th data-sort="show">Show</th>
+          <th data-sort="episode">Latest Episode</th>
+          <th data-sort="airdate" data-default="desc">Air Date</th>
+          <th data-sort="network" class="hide-mobile">Network</th>
+          <th data-sort="status" class="hide-mobile">Status</th>
+          <th data-sort="next" class="hide-mobile">Next Episode</th>
+        </tr>
+      </thead>
+      <tbody id="resultsBody"></tbody>
+    </table>
+  </div>
+
+  <script>
+    // ============ CONFIG ============
+    const AUTO_LOAD_CSV = 'show_list.csv';
+    const TVMAZE_API = 'https://api.tvmaze.com';
+    
+    // Default shows - name required, IMDB optional
+    const defaultShows = [
+      { name: "Slow Horses", imdb: "5875444" },
+      { name: "The Last of Us", imdb: "3581920" },
+      { name: "Lynley", imdb: "0274253" }
+    ];
+
+    // ============ STATE ============
+    let allData = [];
+    let filteredData = [];
+    let currentSort = { key: 'airdate', direction: 'desc' };
+
+    // ============ UTILITIES ============
+    function parseCSV(text) {
+      const lines = text.trim().split('\n').filter(l => l.trim());
+      if (lines.length < 2) return [];
+      
+      // Check if header has IMDB column
+      const header = lines[0].toLowerCase();
+      const hasImdbColumn = header.includes('imdb');
+      
+      return lines.slice(1).map(line => {
+        const parts = line.split(',').map(s => s.trim());
+        const name = parts[0];
+        const imdb = hasImdbColumn && parts[1] ? parts[1].replace(/^tt/i, '') : null;
+        
+        return { name, imdb };
+      }).filter(s => s.name);
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return 'N/A';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric', month: 'short', day: 'numeric'
+      });
+    }
+
+    function formatRelativeTime(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      const now = new Date();
+      const diff = now - date;
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      
+      if (days < 0) return 'upcoming';
+      if (days === 0) return 'today';
+      if (days === 1) return 'yesterday';
+      if (days < 7) return `${days} days ago`;
+      return `${days}d ago`;
+    }
+
+    function getStatusBadge(status) {
+      const statusLower = (status || 'unknown').toLowerCase();
+      let className = 'status-unknown';
+      if (statusLower === 'running') className = 'status-running';
+      if (statusLower === 'ended') className = 'status-ended';
+      return `<span class="badge ${className}">${status || 'Unknown'}</span>`;
+    }
+
+    function getLookupMethodBadge(method, success) {
+      if (!success) {
+        return `<span class="badge lookup-failed">❌ ${method}</span>`;
+      }
+      if (method === 'name') {
+        return `<span class="badge lookup-name">✅ Name Match</span>`;
+      }
+      if (method === 'imdb') {
+        return `<span class="badge lookup-imdb">✅ IMDB Match</span>`;
+      }
+      return '';
+    }
+
+    // ============ TVMAZE API - HYBRID LOOKUP ============
+    async function fetchShowData(showName, imdbId = null) {
+      let showData = null;
+      let lookupMethod = null;
+      let lookupAttempts = [];
+      
+      // STRATEGY 1: Try name search first
+      if (showName) {
+        try {
+          lookupAttempts.push({ method: 'name', status: 'trying' });
+          
+          const searchRes = await fetch(`${TVMAZE_API}/search/shows?q=${encodeURIComponent(showName)}`);
+          
+          if (searchRes.ok) {
+            const searchResults = await searchRes.json();
+            
+            if (searchResults && searchResults.length > 0) {
+              const bestMatch = searchResults[0];
+              const showId = bestMatch.show.id;
+              
+              const showRes = await fetch(`${TVMAZE_API}/shows/${showId}?embed=episodes`);
+              
+              if (showRes.ok) {
+                showData = await showRes.json();
+                lookupMethod = 'name';
+                lookupAttempts[lookupAttempts.length - 1].status = 'success';
+              } else {
+                lookupAttempts[lookupAttempts.length - 1].status = 'failed';
+              }
+            } else {
+              lookupAttempts[lookupAttempts.length - 1].status = 'no_results';
+            }
+          } else {
+            lookupAttempts[lookupAttempts.length - 1].status = 'failed';
+          }
+        } catch (err) {
+          console.log(`Name search failed for "${showName}":`, err.message);
+          lookupAttempts[lookupAttempts.length - 1].status = 'error';
+          lookupAttempts[lookupAttempts.length - 1].error = err.message;
+        }
+      }
+      
+      // STRATEGY 2: If name failed, try IMDB fallback
+      if (!showData && imdbId) {
+        try {
+          lookupAttempts.push({ method: 'imdb', status: 'trying' });
+          
+          const lookupRes = await fetch(`${TVMAZE_API}/lookup/shows?imdb=tt${imdbId}`);
+          
+          if (lookupRes.ok) {
+            const lookupData = await lookupRes.json();
+            
+            if (lookupData && lookupData.id) {
+              const showId = lookupData.id;
+              const showRes = await fetch(`${TVMAZE_API}/shows/${showId}?embed=episodes`);
+              
+              if (showRes.ok) {
+                showData = await showRes.json();
+                lookupMethod = 'imdb';
+                lookupAttempts[lookupAttempts.length - 1].status = 'success';
+              } else {
+                lookupAttempts[lookupAttempts.length - 1].status = 'failed';
+              }
+            } else {
+              lookupAttempts[lookupAttempts.length - 1].status = 'no_results';
+            }
+          } else {
+            lookupAttempts[lookupAttempts.length - 1].status = 'failed';
+          }
+        } catch (err) {
+          console.log(`IMDB lookup failed for "${imdbId}":`, err.message);
+          lookupAttempts[lookupAttempts.length - 1].status = 'error';
+          lookupAttempts[lookupAttempts.length - 1].error = err.message;
+        }
+      }
+      
+      // If both methods failed, return error
+      if (!showData) {
+        const errorMsg = `Show not found (tried: ${lookupAttempts.map(a => a.method).join(', ')})`;
+        return { 
+          error: errorMsg, 
+          searchedName: showName,
+          imdbId: imdbId,
+          lookupAttempts: lookupAttempts
+        };
+      }
+      
+      // Process successful show data
+      const episodes = showData._embedded?.episodes || [];
+      
+      const airedEpisodes = episodes.filter(ep => 
+        ep.airdate && new Date(ep.airdate) <= new Date()
+      );
+      airedEpisodes.sort((a, b) => new Date(b.airdate) - new Date(a.airdate));
+      const latestEpisode = airedEpisodes[0];
+      
+      const upcomingEpisodes = episodes.filter(ep => 
+        ep.airdate && new Date(ep.airdate) > new Date()
+      );
+      upcomingEpisodes.sort((a, b) => new Date(a.airdate) - new Date(b.airdate));
+      const nextEpisode = upcomingEpisodes[0];
+      
+      return {
+        id: showData.id,
+        name: showData.name,
+        searchedName: showName,
+        imdbId: imdbId,
+        lookupMethod: lookupMethod,
+        lookupAttempts: lookupAttempts,
+        image: showData.image?.medium || showData.image?.original || null,
+        network: showData.network?.name || showData.webChannel?.name || 'N/A',
+        status: showData.status,
+        premiered: showData.premiered,
+        ended: showData.ended,
+        imdb: showData.externalIds?.imdb || 'N/A',
+        latestEpisode: latestEpisode ? {
+          name: latestEpisode.name,
+          season: latestEpisode.season,
+          number: latestEpisode.number,
+          airdate: latestEpisode.airdate,
+          airtime: latestEpisode.airtime,
+          airstamp: latestEpisode.airstamp
+        } : null,
+        nextEpisode: nextEpisode ? {
+          name: nextEpisode.name,
+          season: nextEpisode.season,
+          number: nextEpisode.number,
+          airdate: nextEpisode.airdate,
+          airtime: nextEpisode.airtime
+        } : null,
+        episodeCount: episodes.length
+      };
+    }
+
+    // ============ RENDERING ============
+    function renderTable(data) {
+      const tbody = document.getElementById('resultsBody');
+      tbody.innerHTML = '';
+      
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">No results found. Try adjusting your filter.</td></tr>';
+        return;
+      }
+      
+      data.forEach(item => {
+        const row = tbody.insertRow();
+        
+        if (item.error) {
+          // Show detailed lookup attempts for debugging
+          let attemptsHtml = '';
+          if (item.lookupAttempts) {
+            attemptsHtml = item.lookupAttempts.map(a => {
+              const icon = a.status === 'success' ? '✅' : a.status === 'failed' || a.status === 'error' || a.status === 'no_results' ? '❌' : '⏳';
+              return `<span class="badge lookup-failed" style="margin-right:0.25rem">${icon} ${a.method}</span>`;
+            }).join('');
+          }
+          
+          row.innerHTML = `
+            <td colspan="6">
+              <div class="error">⚠️ "${item.searchedName}": ${item.error}</div>
+              <div class="meta">
+                ${item.imdbId ? `IMDB: tt${item.imdbId} • ` : ''}
+                ${attemptsHtml}
+              </div>
+              <div class="meta" style="margin-top:0.5rem">
+                💡 Tip: Check spelling or try a different IMDB ID
+              </div>
+            </td>
+          `;
+          return;
+        }
+        
+        const latest = item.latestEpisode;
+        const next = item.nextEpisode;
+        
+        // Show lookup method badge
+        const lookupBadge = getLookupMethodBadge(item.lookupMethod, true);
+        
+        // Show if name was fuzzy-matched
+        const nameMatchBadge = item.name.toLowerCase() !== item.searchedName.toLowerCase() 
+          ? `<span class="meta">Searched: "${item.searchedName}" → Matched: "${item.name}"</span>` 
+          : `<span class="meta">Searched: "${item.searchedName}"</span>`;
+        
+        row.innerHTML = `
+          <td>
+            <div class="show-info">
+              ${item.image ? `<img src="${item.image}" alt="${item.name}" class="show-poster" />` : ''}
+              <div>
+                <strong>${item.name}</strong>
+                <span class="lookup-method">${lookupBadge}</span>
+                ${nameMatchBadge}
+                ${item.imdb !== 'N/A' ? `<span class="meta">IMDB: ${item.imdb}</span>` : ''}
+                ${item.premiered ? `<span class="meta">Premiered: ${item.premiered}</span>` : ''}
+              </div>
+            </div>
+          </td>
+          <td>
+            ${latest ? `
+              <div class="episode-title">S${latest.season}:E${latest.number}</div>
+              <div class="meta">${latest.name}</div>
+              ${latest.airtime ? `<span class="badge">${latest.airtime}</span>` : ''}
+            ` : '<span class="loading">No episodes aired</span>'}
+          </td>
+          <td>
+            ${latest ? `
+              <div>${formatDate(latest.airdate)}</div>
+              <span class="meta">${formatRelativeTime(latest.airdate)}</span>
+            ` : 'N/A'}
+          </td>
+          <td class="hide-mobile">
+            <span class="badge network">${item.network}</span>
+          </td>
+          <td class="hide-mobile">
+            ${getStatusBadge(item.status)}
+          </td>
+          <td class="hide-mobile">
+            ${next ? `
+              <div class="next-episode">
+                <strong>S${next.season}:E${next.number}</strong><br>
+                ${next.name}<br>
+                ${formatDate(next.airdate)} ${next.airtime ? `at ${next.airtime}` : ''}
+              </div>
+            ` : '<span class="no-next">No upcoming episodes</span>'}
+          </td>
+        `;
+        
+        row.dataset.show = item.name.toLowerCase();
+        row.dataset.episode = latest ? `${latest.season}.${latest.number}`.padStart(6, '0') : '0';
+        row.dataset.airdate = latest ? new Date(latest.airdate).getTime() : 0;
+        row.dataset.network = (item.network || '').toLowerCase();
+        row.dataset.status = (item.status || '').toLowerCase();
+        row.dataset.next = next ? new Date(next.airdate).getTime() : 9999999999999;
+      });
+    }
+
+    // ============ FILTERING ============
+    function applyFilter() {
+      const query = document.getElementById('filterInput').value.toLowerCase().trim();
+      
+      if (!query) {
+        filteredData = [...allData];
+      } else {
+        filteredData = allData.filter(item => {
+          if (item.error) return false;
+          
+          const showName = item.name.toLowerCase();
+          const searchedName = item.searchedName.toLowerCase();
+          const network = (item.network || '').toLowerCase();
+          const status = (item.status || '').toLowerCase();
+          const latestEp = item.latestEpisode?.name?.toLowerCase() || '';
+          const nextEp = item.nextEpisode?.name?.toLowerCase() || '';
+          
+          return showName.includes(query) || 
+                 searchedName.includes(query) ||
+                 network.includes(query) || 
+                 status.includes(query) ||
+                 latestEp.includes(query) || 
+                 nextEp.includes(query);
+        });
+      }
+      
+      applySort();
+      updateStatus();
+    }
+
+    function updateStatus() {
+      const status = document.getElementById('status');
+      const total = allData.length;
+      const shown = filteredData.length;
+      const errors = allData.filter(i => i.error).length;
+      const nameLookups = allData.filter(i => !i.error && i.lookupMethod === 'name').length;
+      const imdbLookups = allData.filter(i => !i.error && i.lookupMethod === 'imdb').length;
+      
+      if (total === 0) {
+        status.innerHTML = '';
+        return;
+      }
+      
+      let html = `<span class="badge">${shown} of ${total} shows</span>`;
+      if (errors > 0) {
+        html += ` <span class="badge" style="background:#fee2e2;color:#991b1b">${errors} error${errors !== 1 ? 's' : ''}</span>`;
+      }
+      if (nameLookups > 0 || imdbLookups > 0) {
+        html += ` <span class="badge" style="background:#dcfce7;color:#166534">${nameLookups} name</span>`;
+        html += ` <span class="badge" style="background:#dbeafe;color:#1e40af">${imdbLookups} IMDB</span>`;
+      }
+      status.innerHTML = html;
+    }
+
+    // ============ SORTING ============
+    function applySort() {
+      const { key, direction } = currentSort;
+      const multiplier = direction === 'asc' ? 1 : -1;
+      
+      filteredData.sort((a, b) => {
+        if (a.error && b.error) return 0;
+        if (a.error) return 1;
+        if (b.error) return -1;
+        
+        let valA, valB;
+        
+        switch(key) {
+          case 'show':
+            valA = a.name.toLowerCase();
+            valB = b.name.toLowerCase();
+            break;
+          case 'episode':
+            valA = a.latestEpisode ? `${a.latestEpisode.season}.${a.latestEpisode.number}`.padStart(6, '0') : '0';
+            valB = b.latestEpisode ? `${b.latestEpisode.season}.${b.latestEpisode.number}`.padStart(6, '0') : '0';
+            break;
+          case 'airdate':
+            valA = a.latestEpisode ? new Date(a.latestEpisode.airdate).getTime() : 0;
+            valB = b.latestEpisode ? new Date(b.latestEpisode.airdate).getTime() : 0;
+            break;
+          case 'network':
+            valA = (a.network || '').toLowerCase();
+            valB = (b.network || '').toLowerCase();
+            break;
+          case 'status':
+            valA = (a.status || '').toLowerCase();
+            valB = (b.status || '').toLowerCase();
+            break;
+          case 'next':
+            valA = a.nextEpisode ? new Date(a.nextEpisode.airdate).getTime() : 9999999999999;
+            valB = b.nextEpisode ? new Date(b.nextEpisode.airdate).getTime() : 9999999999999;
+            break;
+          default:
+            return 0;
+        }
+        
+        if (valA === valB) return 0;
+        return valA > valB ? multiplier : -multiplier;
+      });
+      
+      renderTable(filteredData);
+      updateSortIndicators();
+    }
+
+    function updateSortIndicators() {
+      document.querySelectorAll('th[data-sort]').forEach(th => {
+        th.classList.remove('sorted', 'sort-asc', 'sort-desc');
+        if (th.dataset.sort === currentSort.key) {
+          th.classList.add('sorted');
+          th.classList.add(currentSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+        }
+      });
+    }
+
+    function handleSortClick(e) {
+      const th = e.currentTarget;
+      const key = th.dataset.sort;
+      const defaultDir = th.dataset.default || 'asc';
+      
+      if (currentSort.key === key) {
+        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentSort = { key, direction: defaultDir };
+      }
+      
+      applySort();
+    }
+
+    // ============ AUTO-LOAD CSV ============
+    async function tryAutoLoadCSV() {
+      const banner = document.getElementById('autoLoadBanner');
+      
+      try {
+        banner.style.display = 'flex';
+        banner.className = 'banner';
+        banner.innerHTML = '⏳ Checking for show_list.csv...';
+        
+        const response = await fetch(`${AUTO_LOAD_CSV}?t=${Date.now()}`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const text = await response.text();
+        const shows = parseCSV(text);
+        
+        if (!shows.length) {
+          throw new Error('No valid shows found in CSV');
+        }
+        
+        banner.className = 'banner success';
+        banner.innerHTML = `✅ Loaded ${shows.length} show${shows.length !== 1 ? 's' : ''} from show_list.csv`;
+        
+        console.log(`📥 Auto-loaded ${shows.length} shows from ${AUTO_LOAD_CSV}`);
+        return shows;
+        
+      } catch (err) {
+        console.log(`ℹ️ Could not auto-load ${AUTO_LOAD_CSV}: ${err.message}`);
+        
+        if (err.message.includes('HTTP 404') || err.message.includes('Failed to fetch')) {
+          banner.style.display = 'none';
+        } else {
+          banner.className = 'banner error';
+          banner.innerHTML = `⚠️ Could not load show_list.csv: ${err.message}. Using default shows.`;
+        }
+        
+        return null;
+      }
+    }
+
+    // ============ MAIN FLOW ============
+    async function loadShows(shows, isAutoLoad = false) {
+      const status = document.getElementById('status');
+      const loadBtn = document.getElementById('loadBtn');
+      const refreshBtn = document.getElementById('refreshBtn');
+      
+      loadBtn.disabled = true;
+      refreshBtn.disabled = true;
+      
+      if (isAutoLoad) {
+        status.innerHTML = `<span class="loading">⏳ Auto-loading ${shows.length} show${shows.length !== 1 ? 's' : ''} from TVMaze...</span>`;
+      } else {
+        status.innerHTML = '<span class="loading">⏳ Fetching show data from TVMaze...</span>';
+      }
+      
+      document.getElementById('resultsBody').innerHTML = '';
+      allData = [];
+      
+      const concurrency = 5;
+      for (let i = 0; i < shows.length; i += concurrency) {
+        const batch = shows.slice(i, i + concurrency);
+        const results = await Promise.all(batch.map(async (show) => {
+          const data = await fetchShowData(show.name, show.imdb);
+          return data;
+        }));
+        allData.push(...results);
+        
+        const loaded = Math.min(i + concurrency, shows.length);
+        status.innerHTML = `<span class="loading">⏳ Loaded ${loaded}/${shows.length} shows...</span>`;
+      }
+      
+      filteredData = [...allData];
+      applySort();
+      
+      loadBtn.disabled = false;
+      refreshBtn.disabled = false;
+      updateStatus();
+    }
+
+    // ============ EVENT LISTENERS ============
+    document.getElementById('loadBtn').addEventListener('click', async () => {
+      const fileInput = document.getElementById('csvInput');
+      
+      if (fileInput.files.length > 0) {
+        try {
+          const text = await fileInput.files[0].text();
+          const shows = parseCSV(text);
+          
+          if (!shows.length) {
+            document.getElementById('status').innerHTML = 
+              '<span class="error">❌ No valid shows found. Expected format: Show[,IMDB]</span>';
+            return;
+          }
+          
+          await loadShows(shows);
+        } catch (err) {
+          document.getElementById('status').innerHTML = 
+            `<span class="error">❌ Error reading file: ${err.message}</span>`;
+        }
+      } else {
+        await loadShows(defaultShows);
+      }
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      document.getElementById('filterInput').value = '';
+      currentSort = { key: 'airdate', direction: 'desc' };
+      filteredData = [...allData];
+      applySort();
+      updateStatus();
+    });
+
+    document.getElementById('refreshBtn').addEventListener('click', async () => {
+      const shows = allData.filter(i => !i.error).map(i => ({
+        name: i.searchedName || i.name,
+        imdb: i.imdbId !== 'N/A' ? i.imdbId?.replace(/^tt/, '') : null
+      }));
+      if (shows.length > 0) {
+        await loadShows(shows);
+      }
+    });
+
+    document.getElementById('filterInput').addEventListener('input', 
+      (() => {
+        let timeout;
+        return () => {
+          clearTimeout(timeout);
+          timeout = setTimeout(applyFilter, 150);
+        };
+      })()
+    );
+
+    document.querySelectorAll('th[data-sort]').forEach(th => {
+      th.addEventListener('click', handleSortClick);
+    });
+
+    // ============ INIT ============
+    window.addEventListener('DOMContentLoaded', async () => {
+      updateSortIndicators();
+      
+      const autoLoadedShows = await tryAutoLoadCSV();
+      
+      if (autoLoadedShows) {
+        await loadShows(autoLoadedShows, true);
+      } else {
+        await loadShows(defaultShows);
+      }
+    });
+  </script>
+</body>
+</html>
