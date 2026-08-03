@@ -148,7 +148,7 @@
       background: white;
       border-radius: 8px;
       border: 1px solid var(--border);
-      overflow: hidden;
+      overflow-x: auto; /* ADD THIS to allow horizontal scrolling on phones */
       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     
@@ -282,7 +282,6 @@
       .controls { flex-direction: column; align-items: stretch; }
       table { font-size: 0.9rem; }
       th, td { padding: 0.7rem 0.5rem; }
-      .hide-mobile { display: none; }
       .show-poster { display: none; }
     }
   </style>
@@ -324,9 +323,9 @@
           <th data-sort="show">Show</th>
           <th data-sort="episode">Latest Episode</th>
           <th data-sort="airdate" data-default="desc">Air Date</th>
-          <th data-sort="network" class="hide-mobile">Network</th>
-          <th data-sort="status" class="hide-mobile">Status</th>
-          <th data-sort="next" class="hide-mobile">Next Episode</th>
+          <th data-sort="network" >Network</th>
+          <th data-sort="status" >Status</th>
+          <th data-sort="next" >Next Episode</th>
         </tr>
       </thead>
       <tbody id="resultsBody"></tbody>
@@ -656,13 +655,13 @@
               <span class="meta">${formatRelativeTime(latest.airdate)}</span>
             ` : 'N/A'}
           </td>
-          <td class="hide-mobile">
+          <td >
             <span class="badge network">${item.network}</span>
           </td>
-          <td class="hide-mobile">
+          <td >
             ${getStatusBadge(item.status)}
           </td>
-          <td class="hide-mobile">
+          <td >
             ${next ? `
               <div class="next-episode">
                 <strong>S${next.season}:E${next.number}</strong><br>
