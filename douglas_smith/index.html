@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Douglas & Smith Spatial Production Model</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #34495e;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .results {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        .result-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-left: 4px solid #3498db;
+            border-radius: 4px;
+        }
+        .result-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+        .result-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 20px;
+        }
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        .description {
+            font-size: 0.85em;
+            color: #7f8c8d;
+            margin-top: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Douglas & Smith Spatial Production Model</h1>
+    <p style="text-align: center; color: #7f8c8d;">Interactive calculator for analyzing the American farming frontier</p>
+    
+    <div class="container">
+        <div class="panel">
+            <h2>Market & Price Parameters</h2>
+            
+            <div class="input-group">
+                <label for="P">Market Price (P) - $/ton</label>
+                <input type="number" id="P" value="40" step="1">
+                <div class="description">Price of wheat at the market</div>
+            </div>
+            
+            <div class="input-group">
+                <label for="w">Wage Rate (w) - $/man-day</label>
+                <input type="number" id="w" value="1" step="0.1">
+                <div class="description">Daily wage for agricultural labor</div>
+            </div>
+            
+            <div class="input-group">
+                <label for="c">Capital Cost (c) - $/day</label>
+                <input type="number" id="c" value="5.45" step="0.1">
+                <div class="description">Daily cost of capital equipment</div>
+            </div>
+            
+            <div class="input-group">
+                <label for="tau">Transport Cost (τ) - $/ton-mile</label>
+                <input type="number" id="tau" value="0.20" step="0.01">
+                <div class="description">Cost to transport one ton one mile</div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>Production Function Parameters</h2>
+            
+            <div class="input-group">
+                <label for="alpha">Labor Share in Agriculture (α)</label>
+                <input type="number" id="alpha" value="0.8" step="0.05" min="0" max="1">
+                <div class="description">Elasticity of labor in composite input</div>
+            </div>
+            
+            <div class="input-group">
+                <label for="beta">Labor Share in Transport (β)</label>
+                <input type="number" id="beta" value="0.2" step="0.05" min="0" max="1">
+                <div class="description">Elasticity of labor in transport</div>
+            </div>
+            
+            <div class="input-group">
+                <label for="sigma">Transport Productivity (σ) - ton-miles/day</label>
+                <input type="number" id="sigma" value="32" step="1">
+                <div class="description">Daily hauling capacity (Conestoga wagon)</div>
+            </div>
+            
+            <div class="input-group">
+                <label for="mu">Max Output (μ) - tons/acre</label>
+                <input type="number" id="mu" value="1" step="0.1">
+                <div class="description">Maximum production capacity per acre</div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>Logistic Function Parameters</h2>
+            
+            <div class="input-group">
+                <label for="nu">Exponent (ν)</label>
+                <input type="number" id="nu" value="2" step="0.5">
+                <div class="description">Shape parameter for production function</div>
+            </div>
+            
+            <div class="input-group">
+                <label for="theta">Logistic Parameter (θ)</label>
+                <input type="number" id="theta" value="2" step="0.5">
+                <div class="description">Denominator constant in logistic function</div>
+            </div>
+            
+            <div class="input-group">
+                <label for="lf_given">Frontier Labor (l_f) - man-days/acre</label>
+                <input type="number" id="lf_given" value="2.62" step="0.1">
+                <div class="description">Labor input at the frontier</div>
+            </div>
+            
+            <div class="input-group">
+                <label for="qf_given">Frontier Output (q_f) - tons/acre</label>
+                <input type="number" id="qf_given" value="0.5" step="0.05">
+                <div class="description">Output per acre at the frontier</div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>Calibration</h2>
+            
+            <button onclick="calculate()">Calculate Model</button>
+            <button onclick="resetToDefaults()" style="background: #95a5a6; margin-top: 10px;">Reset to Defaults</button>
+            
+            <div class="results" id="results">
+                <h3>Results</h3>
+                <div class="result-item">
+                    <div class="result-label">Calibrated Theta (θ)</div>
+                    <div class="result-value" id="calibrated_theta">-</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Effective Wage (W)</div>
+                    <div class="result-value" id="effective_wage">-</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Frontier Distance (f)</div>
+                    <div class="result-value" id="frontier_distance">- miles</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Optimal Labor at Market (l₀)</div>
+                    <div class="result-value" id="optimal_labor_market">- man-days/acre</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Output at Market (q₀)</div>
+                    <div class="result-value" id="output_market">- tons/acre</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel full-width">
+            <h2>Total Market Quantities</h2>
+            <div class="results">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                    <div class="result-item">
+                        <div class="result-label">Total Supply (S)</div>
+                        <div class="result-value" id="total_supply">- million tons</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Total Labor (L)</div>
+                        <div class="result-value" id="total_labor">- million man-days</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Total Transport (T)</div>
+                        <div class="result-value" id="total_transport">- billion ton-miles</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel full-width">
+            <h2>Production Profile</h2>
+            <div class="chart-container">
+                <canvas id="productionChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="panel full-width">
+            <h2>Land Rent Profile</h2>
+            <div class="chart-container">
+                <canvas id="rentChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables for charts
+        let productionChart = null;
+        let rentChart = null;
+        
+        // Production function q(l)
+        function q(l, theta, nu, mu) {
+            return mu * Math.pow(l, nu) / (theta + Math.pow(l, nu));
+        }
+        
+        // Derivative of production function
+        function dq_dl(l, theta, nu, mu) {
+            const num = mu * nu * theta * Math.pow(l, nu - 1);
+            const den = Math.pow(theta + Math.pow(l, nu), 2);
+            return num / den;
+        }
+        
+        // Inverse distance function x(l)
+        function x_of_l(l, P, W, tau, theta, nu, mu) {
+            const ql = q(l, theta, nu, mu);
+            return (1/tau) * (P - W * l / ql);
+        }
+        
+        // Numerical derivative
+        function numerical_derivative(func, x, h = 1e-6) {
+            return (func(x + h) - func(x - h)) / (2 * h);
+        }
+        
+        // Root finding using bisection
+        function find_root(func, a, b, tol = 1e-8, max_iter = 1000) {
+            let fa = func(a);
+            let fb = func(b);
+            
+            if (fa * fb > 0) {
+                console.log("Root not bracketed");
+                return null;
+            }
+            
+            for (let i = 0; i < max_iter; i++) {
+                const c = (a + b) / 2;
+                const fc = func(c);
+                
+                if (Math.abs(fc) < tol || (b - a) / 2 < tol) {
+                    return c;
+                }
+                
+                if (fa * fc < 0) {
+                    b = c;
+                    fb = fc;
+                } else {
+                    a = c;
+                    fa = fc;
+                }
+            }
+            
+            return (a + b) / 2;
+        }
+        
+        // Numerical integration using Simpson's rule
+        function simpson_integrate(func, a, b, n = 1000) {
+            const h = (b - a) / n;
+            let sum = func(a) + func(b);
+            
+            for (let i = 1; i < n; i++) {
+                const x = a + i * h;
+                const coeff = (i % 2 === 0) ? 2 : 4;
+                sum += coeff * func(x);
+            }
+            
+            return (h / 3) * sum;
+        }
+        
+        function calculate() {
+            // Get input values
+            const P = parseFloat(document.getElementById('P').value);
+            const w = parseFloat(document.getElementById('w').value);
+            const c = parseFloat(document.getElementById('c').value);
+            const tau = parseFloat(document.getElementById('tau').value);
+            const alpha = parseFloat(document.getElementById('alpha').value);
+            const beta = parseFloat(document.getElementById('beta').value);
+            const sigma = parseFloat(document.getElementById('sigma').value);
+            const mu = parseFloat(document.getElementById('mu').value);
+            const nu = parseFloat(document.getElementById('nu').value);
+            const theta_input = parseFloat(document.getElementById('theta').value);
+            const lf_given = parseFloat(document.getElementById('lf_given').value);
+            const qf_given = parseFloat(document.getElementById('qf_given').value);
+            
+            // Calculate effective wage W
+            const A1 = Math.pow(w * (1 - alpha) / (c * alpha), alpha);
+            const W = w + c * A1;
+            
+            // Calibrate theta to match frontier conditions
+            const theta_calibrated = (Math.pow(lf_given, nu)) * ((mu / qf_given) - 1);
+            
+            // Calculate frontier distance
+            const f = x_of_l(lf_given, P, W, tau, theta_calibrated, nu, mu);
+            
+            // Safeguard: If price is too low to sustain a frontier, halt calculations
+            if (f <= 0) {
+                document.getElementById('calibrated_theta').textContent = theta_calibrated.toFixed(4);
+                document.getElementById('effective_wage').textContent = '$' + W.toFixed(2) + ' per man-day';
+                document.getElementById('frontier_distance').textContent = '0.00 miles (Price too low)';
+                document.getElementById('optimal_labor_market').textContent = 'N/A';
+                document.getElementById('output_market').textContent = 'N/A';
+                document.getElementById('total_supply').textContent = '0.00 million tons';
+                document.getElementById('total_labor').textContent = '0.00 million man-days';
+                document.getElementById('total_transport').textContent = '0.00 billion ton-miles';
+                return;
+            }
+
+            // Find optimal labor at market (where x=0)
+            // Solve: P = W * l / q(l)
+            function market_condition(l) {
+                const ql = q(l, theta_calibrated, nu, mu);
+                return P - W * l / ql;
+            }
+            
+            // FIX: We know market_condition(lf_given) > 0. 
+            // We must find an upper bound where the condition drops below 0 to bracket the CORRECT (larger) root.
+            let upper_bound = lf_given + 1;
+            while (market_condition(upper_bound) > 0 && upper_bound < 1000000) {
+                upper_bound *= 2;
+            }
+            
+            const l0 = find_root(market_condition, lf_given, upper_bound);
+            const q0 = l0 ? q(l0, theta_calibrated, nu, mu) : 0;
+            
+            // Calculate total quantities
+            let S_total = 0, L_total = 0, T_total = 0;
+            
+            if (l0 && l0 > lf_given) {
+                // Define integrands
+                function dx_dl_func(l) {
+                    return numerical_derivative((x) => x_of_l(x, P, W, tau, theta_calibrated, nu, mu), l);
+                }
+                
+                function integrand_S(l) {
+                    const xl = x_of_l(l, P, W, tau, theta_calibrated, nu, mu);
+                    const dxdll = Math.abs(dx_dl_func(l));
+                    return q(l, theta_calibrated, nu, mu) * xl * dxdll;
+                }
+                
+                function integrand_L(l) {
+                    const xl = x_of_l(l, P, W, tau, theta_calibrated, nu, mu);
+                    const dxdll = Math.abs(dx_dl_func(l));
+                    return l * xl * dxdll;
+                }
+                
+                function integrand_T(l) {
+                    const xl = x_of_l(l, P, W, tau, theta_calibrated, nu, mu);
+                    const dxdll = Math.abs(dx_dl_func(l));
+                    return q(l, theta_calibrated, nu, mu) * Math.pow(xl, 2) * dxdll;
+                }
+                
+                // Integrate from frontier to market
+                const S_integral = simpson_integrate(integrand_S, lf_given, l0);
+                const L_integral = simpson_integrate(integrand_L, lf_given, l0);
+                const T_integral = simpson_integrate(integrand_T, lf_given, l0);
+                
+                const factor = 640 * Math.PI;
+                S_total = factor * S_integral;
+                L_total = factor * L_integral;
+                T_total = factor * T_integral;
+            }
+            
+            // Update results display
+            document.getElementById('calibrated_theta').textContent = theta_calibrated.toFixed(4);
+            document.getElementById('effective_wage').textContent = '$' + W.toFixed(2) + ' per man-day';
+            document.getElementById('frontier_distance').textContent = f.toFixed(2) + ' miles';
+            document.getElementById('optimal_labor_market').textContent = l0 ? l0.toFixed(4) + ' man-days/acre' : 'N/A';
+            document.getElementById('output_market').textContent = q0.toFixed(4) + ' tons/acre';
+            document.getElementById('total_supply').textContent = (S_total / 1e6).toFixed(2) + ' million tons';
+            document.getElementById('total_labor').textContent = (L_total / 1e6).toFixed(2) + ' million man-days';
+            document.getElementById('total_transport').textContent = (T_total / 1e9).toFixed(2) + ' billion ton-miles';
+            
+            // Create charts
+            createProductionChart(P, W, tau, theta_calibrated, nu, mu, f, l0, lf_given);
+            createRentChart(P, W, tau, theta_calibrated, nu, mu, f, l0, lf_given);
+        }
+        
+        function createProductionChart(P, W, tau, theta, nu, mu, f, l0, lf) {
+            const ctx = document.getElementById('productionChart').getContext('2d');
+            
+            // Generate data points
+            const distances = [];
+            const outputs = [];
+            const labors = [];
+            const n_points = 50;
+            
+            for (let i = 0; i <= n_points; i++) {
+                const x = (f * i) / n_points;
+                distances.push(x.toFixed(1));
+                
+                // Find l for this x by solving x(l) = x
+                function inverse_condition(l) {
+                    return x_of_l(l, P, W, tau, theta, nu, mu) - x;
+                }
+                
+                const l = find_root(inverse_condition, lf, Math.max(l0, lf + 1));
+                if (l) {
+                    outputs.push(q(l, theta, nu, mu).toFixed(4));
+                    labors.push(l.toFixed(4));
+                } else {
+                    outputs.push(0);
+                    labors.push(0);
+                }
+            }
+            
+            if (productionChart) {
+                productionChart.destroy();
+            }
+            
+            productionChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: distances,
+                    datasets: [
+                        {
+                            label: 'Output (tons/acre)',
+                            data: outputs,
+                            borderColor: 'rgb(52, 152, 219)',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            yAxisID: 'y',
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Labor (man-days/acre)',
+                            data: labors,
+                            borderColor: 'rgb(231, 76, 60)',
+                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                            yAxisID: 'y1',
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Distance from Market (miles)'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Output (tons/acre)'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Labor (man-days/acre)'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function createRentChart(P, W, tau, theta, nu, mu, f, l0, lf) {
+            const ctx = document.getElementById('rentChart').getContext('2d');
+            
+            // Generate data points
+            const distances = [];
+            const rents = [];
+            const n_points = 50;
+            
+            for (let i = 0; i <= n_points; i++) {
+                const x = (f * i) / n_points;
+                distances.push(x.toFixed(1));
+                
+                // Find l for this x
+                function inverse_condition(l) {
+                    return x_of_l(l, P, W, tau, theta, nu, mu) - x;
+                }
+                
+                const l = find_root(inverse_condition, lf, Math.max(l0, lf + 1));
+                if (l) {
+                    const ql = q(l, theta, nu, mu);
+                    const net_price = P - tau * x;
+                    const rent = net_price * ql - W * l;
+                    rents.push(rent.toFixed(2));
+                } else {
+                    rents.push(0);
+                }
+            }
+            
+            if (rentChart) {
+                rentChart.destroy();
+            }
+            
+            rentChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: distances,
+                    datasets: [{
+                        label: 'Land Rent ($/acre)',
+                        data: rents,
+                        borderColor: 'rgb(46, 204, 113)',
+                        backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Distance from Market (miles)'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Land Rent ($/acre)'
+                            },
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+        
+        function resetToDefaults() {
+            document.getElementById('P').value = 40;
+            document.getElementById('w').value = 1;
+            document.getElementById('c').value = 5.45;
+            document.getElementById('tau').value = 0.20;
+            document.getElementById('alpha').value = 0.8;
+            document.getElementById('beta').value = 0.2;
+            document.getElementById('sigma').value = 32;
+            document.getElementById('mu').value = 1;
+            document.getElementById('nu').value = 2;
+            document.getElementById('theta').value = 2;
+            document.getElementById('lf_given').value = 2.62;
+            document.getElementById('qf_given').value = 0.5;
+            
+            calculate();
+        }
+        
+        // Calculate on page load
+        window.onload = function() {
+            calculate();
+        };
+    </script>
+</body>
+</html>
