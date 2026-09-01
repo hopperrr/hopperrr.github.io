@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Douglas & Smith Frontier Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        #map {
+            width: 100%;
+            height: 600px;
+        }
+        .control-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            margin: 0 0 10px 0;
+        }
+        .instructions {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+        }
+        .parameter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-weight: bold;
+            color: #34495e;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+        input[type="number"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 5px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        button.secondary {
+            background: #95a5a6;
+        }
+        button.secondary:hover {
+            background: #7f8c8d;
+        }
+        .results {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+            border-left: 4px solid #27ae60;
+        }
+        .road-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+        .road-item {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 3px solid #3498db;
+        }
+        .road-info {
+            flex: 1;
+        }
+        .road-cost-input {
+            width: 80px;
+            margin-left: 10px;
+        }
+        .delete-btn {
+            background: #e74c3c;
+            padding: 5px 10px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+        .delete-btn:hover {
+            background: #c0392b;
+        }
+        .legend {
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-size: 0.9em;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="control-panel">
+        <h1>Douglas & Smith Agricultural Frontier Model</h1>
+        <div class="instructions">
+            <strong>Instructions:</strong><br>
+            1. Click on the map to place your market city (starting point)<br>
+            2. Use the drawing tools to draw roads from the city<br>
+            3. Assign transport costs to each road segment<br>
+            4. Click "Calculate Frontier" to see the isochrone<br>
+            5. Add more roads to see how the frontier expands
+        </div>
+        
+        <div class="parameter-grid">
+            <div class="input-group">
+                <label for="P">Market Price ($/ton)</label>
+                <input type="number" id="P" value="40" step="1">
+            </div>
+            <div class="input-group">
+                <label for="W">Effective Wage ($/man-day)</label>
+                <input type="number" id="W" value="1.25" step="0.05">
+            </div>
+            <div class="input-group">
+                <label for="lf">Frontier Labor (man-days/acre)</label>
+                <input type="number" id="lf" value="2.62" step="0.1">
+            </div>
+            <div class="input-group">
+                <label for="qf">Frontier Output (tons/acre)</label>
+                <input type="number" id="qf" value="0.5" step="0.05">
+            </div>
+        </div>
+        
+        <div>
+            <button onclick="calculateFrontier()">Calculate Frontier</button>
+            <button class="secondary" onclick="clearAll()">Clear All</button>
+        </div>
+        
+        <div class="road-list" id="roadList">
+            <h3>Road Network</h3>
+            <p style="color: #7f8c8d; font-style: italic;">No roads drawn yet. Use the drawing tools on the map.</p>
+        </div>
+        
+        <div class="results" id="results" style="display: none;">
+            <h3>Frontier Analysis</h3>
+            <div id="resultsContent"></div>
+        </div>
+    </div>
+    
+    <div id="map"></div>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script>
+        // Initialize map
+        const map = L.map('map').setView([39.95, -75.16], 10);
+        
+        // Add base layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // Variables
+        let cityMarker = null;
+        let roads = [];
+        let isochroneLayer = null;
+        let roadIdCounter = 0;
+        window.frontierMarkers = []; // Track frontier points
+        
+        // Drawing setup
+        const drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+        
+        const drawControl = new L.Control.Draw({
+            edit: { featureGroup: drawnItems },
+            draw: {
+                polygon: false, rectangle: false, circle: false, marker: false, circlemarker: false,
+                polyline: { shapeOptions: { color: '#3498db', weight: 4 } }
+            }
+        });
+        map.addControl(drawControl);
+        
+        // Map click handler for city placement
+        map.on('click', function(e) {
+            if (!cityMarker) {
+                cityMarker = L.marker(e.latlng, {
+                    icon: L.divIcon({
+                        className: 'city-marker',
+                        html: '<div style="background: #e74c3c; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+                        iconSize: [20, 20], iconAnchor: [10, 10]
+                    })
+                }).addTo(map);
+                cityMarker.bindPopup('Market City').openPopup();
+            }
+        });
+        
+        // Handle road drawing
+        map.on(L.Draw.Event.CREATED, function(e) {
+            const layer = e.layer;
+            drawnItems.addLayer(layer);
+            
+            // FIX 1: Snap the first point directly to the city marker
+            let latlngs = layer.getLatLngs();
+            if (cityMarker && latlngs.length > 0) {
+                latlngs[0] = cityMarker.getLatLng();
+                layer.setLatLngs(latlngs);
+            }
+            
+            const roadId = roadIdCounter++;
+            const road = { id: roadId, layer: layer, cost: 0.20, latlngs: latlngs };
+            roads.push(road);
+            
+            // Allow clicking the road to change cost
+            layer.on('click', function() {
+                const newCost = prompt('Enter transport cost ($/ton-mile):', road.cost);
+                if (newCost !== null && !isNaN(newCost)) {
+                    road.cost = parseFloat(newCost);
+                    updateRoadList();
+                }
+            });
+            
+            updateRoadList();
+        });
+        
+        // Update road list display
+        function updateRoadList() {
+            const roadListDiv = document.getElementById('roadList');
+            if (roads.length === 0) {
+                roadListDiv.innerHTML = '<h3>Road Network</h3><p style="color: #7f8c8d; font-style: italic;">No roads drawn yet.</p>';
+                return;
+            }
+            let html = '<h3>Road Network</h3>';
+            roads.forEach((road, index) => {
+                const distance = calculateRoadDistance(road.latlngs);
+                html += `
+                    <div class="road-item">
+                        <div class="road-info">
+                            <strong>Road ${index + 1}</strong><br>
+                            <small>Physical: ${distance.toFixed(1)} mi | Cost: $${road.cost.toFixed(2)}/ton-mi</small>
+                        </div>
+                        <input type="number" class="road-cost-input" value="${road.cost}" step="0.01" min="0" onchange="updateRoadCost(${road.id}, this.value)">
+                        <button class="delete-btn" onclick="deleteRoad(${road.id})">Delete</button>
+                    </div>
+                `;
+            });
+            roadListDiv.innerHTML = html;
+        }
+        
+        function calculateRoadDistance(latlngs) {
+            let distance = 0;
+            for (let i = 0; i < latlngs.length - 1; i++) {
+                distance += latlngs[i].distanceTo(latlngs[i + 1]) * 0.000621371;
+            }
+            return distance;
+        }
+        
+        function updateRoadCost(roadId, cost) {
+            const road = roads.find(r => r.id === roadId);
+            if (road) road.cost = parseFloat(cost);
+        }
+        
+        function deleteRoad(roadId) {
+            const roadIndex = roads.findIndex(r => r.id === roadId);
+            if (roadIndex !== -1) {
+                drawnItems.removeLayer(roads[roadIndex].layer);
+                roads.splice(roadIndex, 1);
+                updateRoadList();
+                if (isochroneLayer) calculateFrontier(); // Auto-recalculate
+            }
+        }
+        
+        // Calculate frontier and create isochrone
+        function calculateFrontier() {
+            if (!cityMarker) return alert('Please place a market city first!');
+            if (roads.length === 0) return alert('Please draw at least one road first!');
+            
+            const P = parseFloat(document.getElementById('P').value);
+            const W = parseFloat(document.getElementById('W').value);
+            const lf = parseFloat(document.getElementById('lf').value);
+            const qf = parseFloat(document.getElementById('qf').value);
+            
+            const tau_base = 0.20;
+            const baseFrontierDistance = (P - (W * lf / qf)) / tau_base;
+            
+            if (baseFrontierDistance <= 0) return alert('Market price is too low to sustain a frontier!');
+            
+            // Clear old layers
+            if (isochroneLayer) map.removeLayer(isochroneLayer);
+            if (window.frontierMarkers) window.frontierMarkers.forEach(m => map.removeLayer(m));
+            window.frontierMarkers = [];
+            
+            const cityLatLng = cityMarker.getLatLng();
+            const frontierPoints = [];
+            let minEffectiveDist = Infinity;
+            
+            roads.forEach(road => {
+                road.latlngs[0] = cityLatLng; // Ensure perfect snap
+                road.layer.setLatLngs(road.latlngs);
+                
+                let cumulativeEffectiveDistance = 0;
+                let frontierFound = false;
+                
+                for (let i = 0; i < road.latlngs.length - 1; i++) {
+                    const segmentPhysical = road.latlngs[i].distanceTo(road.latlngs[i+1]) * 0.000621371;
+                    const segmentEffective = segmentPhysical * (road.cost / tau_base);
+                    
+                    if (cumulativeEffectiveDistance + segmentEffective >= baseFrontierDistance) {
+                        // FIX 2: Correct fraction math using effective distance
+                        const remainingEffective = baseFrontierDistance - cumulativeEffectiveDistance;
+                        const fraction = remainingEffective / segmentEffective;
+                        
+                        const fLat = road.latlngs[i].lat + fraction * (road.latlngs[i+1].lat - road.latlngs[i].lat);
+                        const fLng = road.latlngs[i].lng + fraction * (road.latlngs[i+1].lng - road.latlngs[i].lng);
+                        
+                        frontierPoints.push([fLat, fLng]);
+                        
+                        // Add a visible marker at the exact frontier point
+                        const fMarker = L.circleMarker([fLat, fLng], {
+                            radius: 6, color: '#f39c12', fillColor: '#f1c40f', fillOpacity: 1
+                        }).addTo(map).bindPopup(`Frontier Point<br>Effective Dist: ${baseFrontierDistance.toFixed(1)} mi`);
+                        window.frontierMarkers.push(fMarker);
+                        
+                        frontierFound = true;
+                        minEffectiveDist = Math.min(minEffectiveDist, baseFrontierDistance);
+                        break;
+                    }
+                    cumulativeEffectiveDistance += segmentEffective;
+                }
+                
+                // If the road ends before reaching the frontier
+                if (!frontierFound) {
+                    const endPt = road.latlngs[road.latlngs.length - 1];
+                    frontierPoints.push([endPt.lat, endPt.lng]);
+                    
+                    const endMarker = L.circleMarker([endPt.lat, endPt.lng], {
+                        radius: 6, color: '#e74c3c', fillColor: '#c0392b', fillOpacity: 1
+                    }).addTo(map).bindPopup(`Road End<br>Effective Dist: ${cumulativeEffectiveDistance.toFixed(1)} mi`);
+                    window.frontierMarkers.push(endMarker);
+                    
+                    minEffectiveDist = Math.min(minEffectiveDist, cumulativeEffectiveDistance);
+                }
+            });
+            
+            // FIX 3: Handle 1 or 2 roads by drawing a circle instead of a broken polygon
+            if (frontierPoints.length >= 3) {
+                // Sort points radially so the polygon doesn't cross over itself
+                const sortedPoints = frontierPoints.slice().sort((a, b) => {
+                    const angleA = Math.atan2(a[0] - cityLatLng.lat, a[1] - cityLatLng.lng);
+                    const angleB = Math.atan2(b[0] - cityLatLng.lat, b[1] - cityLatLng.lng);
+                    return angleA - angleB;
+                });
+                
+                const allPoints = [cityLatLng, ...sortedPoints];
+                isochroneLayer = L.polygon(allPoints, {
+                    color: '#27ae60', fillColor: '#2ecc71', fillOpacity: 0.3, weight: 3
+                }).addTo(map).bindPopup(`Agricultural Hinterland<br>Base Frontier: ${baseFrontierDistance.toFixed(1)} eff. miles`);
+                
+            } else {
+                // Fallback circle for sparse road networks
+                const circleRadiusMeters = minEffectiveDist * 1609.34;
+                isochroneLayer = L.circle(cityLatLng, {
+                    radius: circleRadiusMeters, color: '#27ae60', fillColor: '#2ecc71', 
+                    fillOpacity: 0.2, weight: 2, dashArray: '5, 10'
+                }).addTo(map).bindPopup(`Frontier Radius<br>Distance: ${minEffectiveDist.toFixed(1)} eff. miles`);
+            }
+            
+            map.fitBounds(isochroneLayer.getBounds(), { padding: [50, 50] });
+            
+            // Update Results Panel
+            const resultsDiv = document.getElementById('results');
+            const resultsContent = document.getElementById('resultsContent');
+            resultsContent.innerHTML = `
+                <p><strong>Base Frontier Distance:</strong> ${baseFrontierDistance.toFixed(1)} effective miles</p>
+                <p><strong>Number of Roads:</strong> ${roads.length}</p>
+                <p><strong>Total Physical Network:</strong> ${roads.reduce((sum, r) => sum + calculateRoadDistance(r.latlngs), 0).toFixed(1)} miles</p>
+                <p style="margin-top: 10px; font-style: italic; color: #7f8c8d;">
+                    ${frontierPoints.length >= 3 
+                        ? 'The green polygon shows the hinterland. Notice how cheaper roads stretch the frontier further!' 
+                        : 'Draw at least 3 roads to see the full polygonal hinterland. Currently showing a radius based on the shortest road.'}
+                </p>
+            `;
+            resultsDiv.style.display = 'block';
+        }
+        
+        function clearAll() {
+            if (cityMarker) { map.removeLayer(cityMarker); cityMarker = null; }
+            roads.forEach(road => drawnItems.removeLayer(road.layer));
+            roads = [];
+            if (isochroneLayer) { map.removeLayer(isochroneLayer); isochroneLayer = null; }
+            if (window.frontierMarkers) {
+                window.frontierMarkers.forEach(m => map.removeLayer(m));
+                window.frontierMarkers = [];
+            }
+            updateRoadList();
+            document.getElementById('results').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
