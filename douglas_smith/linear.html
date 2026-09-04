@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>19th Century Grain Trade Optimizer</title>
+    <script src="https://unpkg.com/javascript-lp-solver/dist/solver.global.js"></script>
+    <style>
+        :root {
+            --parchment: #f4ecd8;
+            --ink: #3e3a32;
+            --accent: #8b4513;
+            --highlight: #d4c3a3;
+            --success: #4a5d23;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background-color: var(--parchment);
+            color: var(--ink);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f4ecd8"/><path d="M0,50 Q25,45 50,50 T100,50" stroke="%23e6d5b8" fill="none" stroke-width="0.5"/></svg>');
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 30px;
+            border: 2px solid var(--accent);
+            box-shadow: 5px 5px 15px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--accent);
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-style: italic;
+            margin-bottom: 30px;
+            color: #5c5346;
+        }
+
+        .historical-context {
+            background: var(--highlight);
+            padding: 15px;
+            border-left: 4px solid var(--accent);
+            margin-bottom: 30px;
+            font-size: 0.95em;
+        }
+
+        h2 {
+            color: var(--accent);
+            border-bottom: 1px dashed var(--accent);
+            padding-bottom: 5px;
+            margin-top: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        th, td {
+            border: 1px solid var(--accent);
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: var(--accent);
+            color: var(--parchment);
+            font-weight: normal;
+            letter-spacing: 1px;
+        }
+
+        /* First column (row headers) gets a slightly different style */
+        th:first-child, td:first-child {
+            background-color: #6b340e;
+            color: var(--parchment);
+            font-weight: bold;
+            min-width: 120px;
+        }
+
+        input[type="number"], input[type="text"] {
+            width: 80px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            background: #fcfcfc;
+        }
+        
+        input[type="text"] {
+            width: 120px;
+            text-align: left;
+        }
+
+        .btn {
+            background-color: var(--accent);
+            color: var(--parchment);
+            border: none;
+            padding: 12px 24px;
+            font-size: 1.1em;
+            font-family: 'Georgia', serif;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+            display: block;
+            margin: 20px auto;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .btn:hover {
+            background-color: #6b340e;
+            transform: translateY(-2px);
+        }
+
+        .results {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .total-cost {
+            font-size: 1.5em;
+            text-align: center;
+            color: var(--success);
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        .route-active {
+            background-color: #e8f5e9;
+            font-weight: bold;
+            color: var(--success);
+        }
+
+        .error-msg {
+            color: #b71c1c;
+            text-align: center;
+            font-weight: bold;
+            margin: 20px 0;
+            display: none;
+            background: #ffebee;
+            padding: 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>The 19th Century Grain Trade</h1>
+    <p class="subtitle">A Linear Programming Transportation Model (Circa 1850)</p>
+
+    <div class="historical-context">
+        <strong>Historical Context:</strong> In the mid-19th century, the American wheat trade was revolutionized by the Erie Canal, the expansion of the B&O Railroad, and Mississippi river steamboats. Chicago emerged as the great Midwestern hub, while New Orleans controlled the river trade. This tool uses Linear Programming to calculate the absolute cheapest way to ship wheat from Western/Southern markets to the booming Eastern seaboard cities, factoring in the varying costs of canals, rails, and coastal shipping.
+    </div>
+
+    <h2>1. Supply & Demand (in 1,000s of Bushels)</h2>
+    <table id="supplyDemandTable">
+        <thead>
+            <tr>
+                <th>Sources (Origins)</th>
+                <th>Supply</th>
+                <th>Destinations (Markets)</th>
+                <th>Demand</th>
+            </tr>
+        </thead>
+        <tbody id="sdBody">
+            <!-- Populated by JS -->
+        </tbody>
+    </table>
+
+    <h2>2. Transportation Costs (Cents per Bushel)</h2>
+    <p style="font-size: 0.9em; color: #666;">
+        <em>Note: Costs reflect historical proxies. Canal/River routes are generally cheaper but slower; Railroads are premium.</em>
+    </p>
+    <table id="costTable">
+        <thead id="costHead">
+            <!-- Populated by JS -->
+        </thead>
+        <tbody id="costBody">
+            <!-- Populated by JS -->
+        </tbody>
+    </table>
+
+    <button class="btn" onclick="solveProblem()">Calculate Optimal Routes</button>
+    
+    <div class="error-msg" id="errorMsg"></div>
+
+    <div class="results" id="resultsSection">
+        <h2>Optimal Shipping Manifest</h2>
+        <div class="total-cost" id="totalCost"></div>
+        <table id="resultsTable">
+            <thead id="resultsHead"></thead>
+            <tbody id="resultsBody"></tbody>
+        </table>
+        <p style="text-align: center; font-style: italic; color: #666;">
+            Routes highlighted in green indicate active shipping lanes. Empty cells mean no wheat was shipped on that route.
+        </p>
+    </div>
+</div>
+
+<script>
+    if (typeof solver === 'undefined') {
+        document.getElementById('errorMsg').innerText = "Error: Failed to load the Linear Programming solver library. Please check your internet connection and refresh the page.";
+        document.getElementById('errorMsg').style.display = 'block';
+    }
+
+    const defaultData = {
+        sources: [
+            { name: "Chicago", supply: 120 },
+            { name: "New Orleans", supply: 60 }
+        ],
+        destinations: [
+            { name: "New York", demand: 70 },
+            { name: "Boston", demand: 40 },
+            { name: "Philadelphia", demand: 40 },
+            { name: "Baltimore", demand: 30 }
+        ],
+        costs: [
+            [22, 28, 24, 21],
+            [35, 42, 32, 28]
+        ]
+    };
+
+    let sources = JSON.parse(JSON.stringify(defaultData.sources));
+    let destinations = JSON.parse(JSON.stringify(defaultData.destinations));
+    let costs = JSON.parse(JSON.stringify(defaultData.costs));
+
+    function renderUI() {
+        // Supply & Demand Table
+        const sdBody = document.getElementById('sdBody');
+        sdBody.innerHTML = '';
+        const maxRows = Math.max(sources.length, destinations.length);
+
+        for (let i = 0; i < maxRows; i++) {
+            const tr = document.createElement('tr');
+            
+            const tdSrcName = document.createElement('td');
+            tdSrcName.innerHTML = i < sources.length ? 
+                `<input type="text" value="${sources[i].name}" onchange="updateSource(${i}, 'name', this.value)">` : '';
+            tr.appendChild(tdSrcName);
+
+            const tdSrcSup = document.createElement('td');
+            tdSrcSup.innerHTML = i < sources.length ? 
+                `<input type="number" value="${sources[i].supply}" min="0" onchange="updateSource(${i}, 'supply', this.value)">` : '';
+            tr.appendChild(tdSrcSup);
+
+            const tdDstName = document.createElement('td');
+            tdDstName.innerHTML = i < destinations.length ? 
+                `<input type="text" value="${destinations[i].name}" onchange="updateDest(${i}, 'name', this.value)">` : '';
+            tr.appendChild(tdDstName);
+
+            const tdDstDem = document.createElement('td');
+            tdDstDem.innerHTML = i < destinations.length ? 
+                `<input type="number" value="${destinations[i].demand}" min="0" onchange="updateDest(${i}, 'demand', this.value)">` : '';
+            tr.appendChild(tdDstDem);
+
+            sdBody.appendChild(tr);
+        }
+
+        // Cost Table - Fixed structure with destinations as column headers
+        const costHead = document.getElementById('costHead');
+        let headHTML = '<tr><th>Source \\ Destination</th>';
+        destinations.forEach(d => {
+            headHTML += `<th>${d.name}</th>`;
+        });
+        headHTML += '</tr>';
+        costHead.innerHTML = headHTML;
+
+        const costBody = document.getElementById('costBody');
+        costBody.innerHTML = '';
+        sources.forEach((s, i) => {
+            const tr = document.createElement('tr');
+            // First cell is the source name (row header)
+            const thCell = document.createElement('th');
+            thCell.textContent = s.name;
+            tr.appendChild(thCell);
+            
+            // Remaining cells are cost inputs for each destination
+            destinations.forEach((d, j) => {
+                const tdCell = document.createElement('td');
+                tdCell.innerHTML = `<input type="number" value="${costs[i][j]}" min="0" onchange="updateCost(${i}, ${j}, this.value)">`;
+                tr.appendChild(tdCell);
+            });
+            costBody.appendChild(tr);
+        });
+    }
+
+    function updateSource(i, field, val) {
+        if(field === 'supply') sources[i].supply = parseFloat(val) || 0;
+        else sources[i].name = val;
+    }
+
+    function updateDest(i, field, val) {
+        if(field === 'demand') destinations[i].demand = parseFloat(val) || 0;
+        else destinations[i].name = val;
+    }
+
+    function updateCost(i, j, val) {
+        costs[i][j] = parseFloat(val) || 0;
+    }
+
+    function solveProblem() {
+        const errorMsg = document.getElementById('errorMsg');
+        const resultsSection = document.getElementById('resultsSection');
+        errorMsg.style.display = 'none';
+        resultsSection.style.display = 'none';
+
+        const totalSupply = sources.reduce((sum, s) => sum + s.supply, 0);
+        const totalDemand = destinations.reduce((sum, d) => sum + d.demand, 0);
+
+        if (totalSupply < totalDemand) {
+            errorMsg.innerText = "Error: Total Supply is less than Total Demand. The markets cannot be fully fed!";
+            errorMsg.style.display = 'block';
+            return;
+        }
+
+        let model = {
+            optimize: "cost",
+            opType: "min",
+            constraints: {},
+            variables: {}
+        };
+
+        for (let i = 0; i < sources.length; i++) {
+            for (let j = 0; j < destinations.length; j++) {
+                let varName = `x_${i}_${j}`;
+                model.variables[varName] = {
+                    cost: costs[i][j],
+                    [`supply_${i}`]: 1,
+                    [`demand_${j}`]: 1
+                };
+            }
+        }
+
+        for (let i = 0; i < sources.length; i++) {
+            model.constraints[`supply_${i}`] = { max: sources[i].supply };
+        }
+
+        for (let j = 0; j < destinations.length; j++) {
+            model.constraints[`demand_${j}`] = { min: destinations[j].demand };
+        }
+
+        let result = solver.Solve(model);
+
+        if (result.feasible === false || result.feasible === 0) {
+            errorMsg.innerText = "Error: No feasible solution found. Check your constraints.";
+            errorMsg.style.display = 'block';
+            return;
+        }
+
+        displayResults(result);
+    }
+
+    function displayResults(result) {
+        const resultsSection = document.getElementById('resultsSection');
+        const totalCostDiv = document.getElementById('totalCost');
+        const resultsHead = document.getElementById('resultsHead');
+        const resultsBody = document.getElementById('resultsBody');
+
+        totalCostDiv.innerText = `Minimum Total Transportation Cost: ${result.result.toFixed(2)/100} Dollars`;
+
+        // Results table - destinations as column headers
+        let headHTML = '<tr><th>Source \\ Destination</th>';
+        destinations.forEach(d => {
+            headHTML += `<th>${d.name}</th>`;
+        });
+        headHTML += '</tr>';
+        resultsHead.innerHTML = headHTML;
+
+        resultsBody.innerHTML = '';
+        sources.forEach((s, i) => {
+            const tr = document.createElement('tr');
+            // First cell is the source name (row header)
+            const thCell = document.createElement('th');
+            thCell.textContent = s.name;
+            tr.appendChild(thCell);
+            
+            // Remaining cells show shipped quantities
+            destinations.forEach((d, j) => {
+                const tdCell = document.createElement('td');
+                let varName = `x_${i}_${j}`;
+                let val = result[varName] || 0;
+                tdCell.className = val > 0 ? 'route-active' : '';
+                tdCell.textContent = val > 0 ? val.toFixed(1) : '-';
+                tr.appendChild(tdCell);
+            });
+            resultsBody.appendChild(tr);
+        });
+
+        resultsSection.style.display = 'block';
+        resultsSection.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    window.onload = renderUI;
+</script>
+
+</body>
+</html>
